@@ -2284,8 +2284,8 @@ table.t.gr-cmp th { font-size: 23px; }
     <div class="g64">
       <div class="stack animate delay-1">
         <div class="trow"><span>호출 1</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="tn" style="--w:1%"></span></div><span class="v">55K</span></div>
-        <div class="trow"><span>호출 10</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="th" style="--w:22%"></span><span class="tn" style="--w:1%"></span></div><span class="v">120K</span></div>
-        <div class="trow"><span>호출 20</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="th" style="--w:40%"></span><span class="tn" style="--w:1%"></span></div><span class="v">175K</span></div>
+        <div class="trow"><span>호출 10</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="th" style="--w:18%"></span><span class="tn" style="--w:1%"></span></div><span class="v">110K</span></div>
+        <div class="trow"><span>호출 20</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="th" style="--w:38%"></span><span class="tn" style="--w:1%"></span></div><span class="v">170K</span></div>
         <div class="trow"><span>호출 40</span><div class="tb"><span class="tp" style="--w:17%"></span><span class="th" style="--w:77%"></span><span class="tn" style="--w:1%"></span></div><span class="v">285K</span></div>
         <div class="legend"><span><i class="tp"></i>prefix: 호출마다 앞에 똑같이 붙는 부분</span><span><i class="th"></i>지난 대화</span><span><i class="tn"></i>새 입력</span></div>
         <p class="v-cap"><b>context</b> = 한 호출에서 모델이 읽는 전체 입력</p>
@@ -2790,7 +2790,7 @@ table.t.gr-cmp th { font-size: 23px; }
   <div class="s-head u-head"><div class="eyebrow">Example · 제 업무의 loop 둘 <span class="v-ev rec lp-ev">실전</span></div><h2>check가 주장한 범위를 다 보면 막고, <em>일부만 보면 속습니다</em></h2></div>
   <div class="s-body u-body">
     <div class="v-vs lp-real">
-      <div class="v-side good animate delay-1"><div class="k">코드 생성기 시간 줄이기</div><div class="big">−28%<span class="lp-u">실행 시간</span></div><div class="t">출력 전체를 비교했습니다</div><p>결과가 바뀌자 check가 막았고, loop는 멈추고 사람에게 물었습니다</p></div>
+      <div class="v-side good animate delay-1"><div class="k">코드 생성기 시간 줄이기</div><div class="big">−28%<span class="lp-u">실행 시간</span></div><div class="t">출력 전체를 비교했습니다</div><p>변경 확인 check가 “안 바뀜”이라며 막자, loop는 check를 고치지 않고 사람에게 물었습니다</p></div>
       <div class="vs animate delay-2">vs</div>
       <div class="v-side bad animate delay-2"><div class="k">병렬 테스트로 빠르게</div><div class="big">5번 중 4번<span class="lp-u">결과가 달라짐</span></div><div class="t">실패한 것만 셌습니다</div><p>guard는 “차이 없음”이라고 했지만, 같은 코드끼리 다시 돌리니 결과가 달랐습니다</p></div>
     </div>
@@ -2939,7 +2939,7 @@ table.t.gr-cmp th { font-size: 23px; }
     <div class="v-band animate delay-3">subagent 하나 ≠ graph — 나누고, <b>계약으로 잇고</b>, 따로 확인해야 graph입니다</div>
   </div></section>
 <section class="slide u-slide slide-content pc u-std u-has-src" data-src="G5" data-seg="graph" data-part="Graph" data-title="계층형: 팀장이 질문을 나누고, 팀원은 동시에 찾고, 결과는 정해진 형식으로 올립니다" data-sec="105" data-time="1:45" data-ends="66:40" data-start="3895" data-min="64" aria-roledescription="slide" aria-label="44 / 76 · 계층형: 팀장이 질문을 나누고, 팀원은 동시에 찾고, 결과는 정해진 형식으로 올립니다">
-  <div class="s-head u-head"><div class="eyebrow">구조 1 · 계층형 <span class="v-ev pub gr-ev">공개</span></div><h2>계층형: 팀장이 질문을 나누고, 팀원은 동시에 찾고, <em>결과는 정해진 형식으로</em> 올립니다</h2></div>
+  <div class="s-head u-head"><div class="eyebrow">구조 1 · 계층형 <span class="v-ev pub gr-ev">공개</span></div><h2>계층형: 팀장이 질문을 나누고,<br>팀원은 동시에 찾고, <em>결과는 정해진 형식으로</em> 올립니다</h2></div>
   <div class="s-body u-body">
     <svg class="dg animate delay-1" viewBox="0 0 1600 400" role="img" aria-label="Anthropic research: 팀장이 계획하고 팀원 셋이 동시에 검색, 정해진 형식으로 팀장에게 올려 종합, 인용 확인 담당이 따로 확인">
       <rect x="20" y="140" width="270" height="120" rx="18" class="node fill"/><text x="155" y="192" text-anchor="middle" font-size="32" class="w">팀장</text><text x="155" y="230" text-anchor="middle" font-size="24" class="w">lead · 계획</text>
@@ -3018,7 +3018,7 @@ table.t.gr-cmp th { font-size: 23px; }
   
 <p class="src">출처: 데모 3 감사 실험, 방식마다 2번 돌린 평균 · Opus 5.5 목록가로 다시 계산 · 발견 내용은 비공개</p></section>
 <section class="slide u-slide slide-content pc u-std" data-src="G8" data-seg="graph" data-part="Graph" data-title="GRAPH.md에는 누가 무엇을 하고, 무엇을 주고받고, 어디서 멈추는지 적습니다" data-sec="105" data-time="1:45" data-ends="73:10" data-start="4285" data-min="71" aria-roledescription="slide" aria-label="48 / 76 · GRAPH.md에는 누가 무엇을 하고, 무엇을 주고받고, 어디서 멈추는지 적습니다">
-  <div class="s-head u-head"><div class="eyebrow">설계 · GRAPH.md 해부</div><h2>GRAPH.md에는 누가 무엇을 하고, 무엇을 주고받고, <em>어디서 멈추는지</em> 적습니다</h2></div>
+  <div class="s-head u-head"><div class="eyebrow">설계 · GRAPH.md 해부</div><h2>GRAPH.md에는 누가 무엇을 하고,<br>무엇을 주고받고, <em>어디서 멈추는지</em> 적습니다</h2></div>
   <div class="s-body u-body">
     <div class="gr-doc animate delay-1">
       <div class="gr-doc-bar"><span class="mono">GRAPH.md</span><span>축약본</span></div>
@@ -3231,9 +3231,9 @@ table.t.gr-cmp th { font-size: 23px; }
     <div class="hm-own">
       <div class="hm-line" aria-hidden="true"></div>
       <div class="hm-cols" data-steps="dim">
-        <div class="hm-col" data-step="1"><span class="nb">1</span><div class="w">시작 전</div><b>정의한다</b><p>문제를 고르고, “끝”과 “멈춤”을 정합니다</p><span class="hm-tag">앞에서 · L5 README는 거절</span></div>
-        <div class="hm-col" data-step="2"><span class="nb">2</span><div class="w">맡길 때</div><b>나눠서 맡긴다</b><p>계약이 분명한 작은 단위로, 나눌 이유가 있을 때만</p><span class="hm-tag">앞에서 · G9 층 판정</span></div>
-        <div class="hm-col" data-step="3"><span class="nb">3</span><div class="w">끝나면</div><b>검증한다</b><p>근거만큼 믿고, 확인을 기계 check로 만듭니다</p><span class="hm-tag">앞에서 · L8 drift</span></div>
+        <div class="hm-col" data-step="1"><span class="nb">1</span><div class="w">시작 전</div><b>정의한다</b><p>문제를 고르고, “끝”과 “멈춤”을 정합니다</p><span class="hm-tag">앞에서 · loop가 README 개선을 거절</span></div>
+        <div class="hm-col" data-step="2"><span class="nb">2</span><div class="w">맡길 때</div><b>나눠서 맡긴다</b><p>계약이 분명한 작은 단위로, 나눌 이유가 있을 때만</p><span class="hm-tag">앞에서 · graph 층 판정</span></div>
+        <div class="hm-col" data-step="3"><span class="nb">3</span><div class="w">끝나면</div><b>검증한다</b><p>근거만큼 믿고, 확인을 기계 check로 만듭니다</p><span class="hm-tag">앞에서 · 병렬 테스트 drift</span></div>
       </div>
     </div>
     <div class="v-band animate delay-2"><b>파란 선은 오너십</b>입니다 — 누가 썼든, 결과의 주인은 사람입니다</div>
@@ -3292,7 +3292,7 @@ table.t.gr-cmp th { font-size: 23px; }
     <div class="in-try animate delay-3"><span>이번 주</span>바꿨으면 같은 기간에 처음부터 끝까지(end-to-end) 다시 재세요</div>
   </div></section>
 <section class="slide u-slide slide-content pc u-std" data-src="I5" data-seg="insight" data-part="인사이트" data-title="다른 눈에게 물으세요: 숫자는 다른 모델이 세는 법까지 검토하게" data-sec="60" data-time="1:00" data-ends="99:55" data-start="5935" data-min="98" aria-roledescription="slide" aria-label="69 / 76 · 다른 눈에게 물으세요: 숫자는 다른 모델이 세는 법까지 검토하게">
-  <div class="s-head u-head"><div class="eyebrow">인사이트 4 / 5 · 한 달 기록에서</div><h2><em>다른 눈에게 물으세요</em>: 숫자는 다른 모델이 세는 법까지 검토하게 하세요</h2></div>
+  <div class="s-head u-head"><div class="eyebrow">인사이트 4 / 5 · 한 달 기록에서</div><h2><em>다른 눈에게 물으세요</em>:<br>숫자는 다른 모델이 세는 법까지 검토하게 하세요</h2></div>
   <div class="s-body u-body">
     <div class="v-flow in-flow">
       <div class="bx bad animate delay-1"><span class="k">모델 A의 첫 집계</span><b class="num">115K번</b><span>반복된 도구 호출</span></div>
@@ -3382,11 +3382,11 @@ table.t.gr-cmp th { font-size: 23px; }
             </svg>
             <div>
               <p class="who">사람의 역할은 일을 직접 하는 것에서, <em>“끝났다”의 기준을 정하고 그걸 믿을 근거를 만드는 것</em>으로 옮겨 갑니다.</p>
-              <p class="cta">graph는 필요할 때만. skill · 설명서 · 데모 결과는 배포 repo에 있습니다 — <strong>그 한 번이 시작입니다.</strong></p>
+              <p class="cta">graph는 필요할 때만. skill · 설명서 · 데모 결과는 배포 repo에 있습니다 — <strong>오늘 한 번 돌려 보는 것이 시작입니다.</strong></p>
             </div>
           </div>
         </div></div></section>
-<section class="slide u-slide slide-content u-qa u-std" data-src="NEW-qa" data-seg="qa" data-part="Q&amp;A" data-title="Q&amp;A" data-sec="900" data-time="15:00" data-ends="121:10" data-start="6370" data-min="106" aria-roledescription="slide" aria-label="75 / 76 · Q&amp;A"><div class="slide-inner"><header class="slide-head animate u-head"><div class="eyebrow">Q&amp;A</div><h2>여러분 업무 하나에 <em>대입해</em> 질문해 주세요</h2></header><div class="u-body"><div class="u-qa-grid"><article class="card u-qa-card animate delay-1"><span class="u-qa-k">완료의 증거</span><h3>무엇이 끝났다는 증거인가요?</h3><p>check.sh · verifier · canary</p></article><article class="card u-qa-card animate delay-2"><span class="u-qa-k">멈출 조건</span><h3>어떤 상황에서 멈춰야 하나요?</h3><p>예산 · BLOCKED · 실패 비용</p></article><article class="card u-qa-card animate delay-3"><span class="u-qa-k">사람의 자리</span><h3>언제 여러분을 불러야 하나요?</h3><p>리스크 2×2 · 리뷰 패킷 · 개입 횟수</p></article></div></div></div></section>
+<section class="slide u-slide slide-content u-qa u-std" data-src="NEW-qa" data-seg="qa" data-part="Q&amp;A" data-title="Q&amp;A" data-sec="900" data-time="15:00" data-ends="121:10" data-start="6370" data-min="106" aria-roledescription="slide" aria-label="75 / 76 · Q&amp;A"><div class="slide-inner"><header class="slide-head animate u-head"><div class="eyebrow">Q&amp;A</div><h2>여러분 업무 하나에 <em>대입해</em> 질문해 주세요</h2></header><div class="u-body"><div class="u-qa-grid"><article class="card u-qa-card animate delay-1"><span class="u-qa-k">완료의 증거</span><h3>무엇이 끝났다는 증거인가요?</h3><p>check.sh · verifier · canary</p></article><article class="card u-qa-card animate delay-2"><span class="u-qa-k">멈출 조건</span><h3>어떤 상황에서 멈춰야 하나요?</h3><p>예산 · BLOCKED · 실패 비용</p></article><article class="card u-qa-card animate delay-3"><span class="u-qa-k">사람의 자리</span><h3>언제 여러분을 불러야 하나요?</h3><p>merge · rollback · 같은 실패 3번</p></article></div></div></div></section>
 <section class="slide u-slide slide-content u-master u-m08 u-std" data-src="M08" data-seg="qa" data-part="Q&amp;A" data-title="마지막으로 — 오늘 자료와 연락처" data-sec="70" data-time="1:10" data-ends="122:20" data-start="7270" data-min="121" aria-roledescription="slide" aria-label="76 / 76 · 마지막으로 — 오늘 자료와 연락처">
         <div class="slide-inner">
           <header class="slide-head animate u-head">
