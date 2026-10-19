@@ -1,6 +1,6 @@
 # slides
 
-"Long Running Agent의 시대, 사람의 역할은?" — 삼성전자 AI센터 세미나 3차 발표 deck이다(72장).
+"Long Running Agent의 시대, 사람의 역할은?" — 삼성전자 AI센터 세미나 3차 발표 deck이다(71장).
 
 - `index.html`: 한 파일로 된 deck이다. 저장소 루트에서 `python3 -m http.server 8000`을 띄우고 `http://localhost:8000/slides/index.html`로 연다. 파일을 바로 열어도 된다.
 - 넘기기: ← → 키. S는 슬라이드 목록이다.
