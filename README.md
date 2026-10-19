@@ -70,7 +70,7 @@ python3 -B -m unittest discover -s token-efficiency-summary/scripts/tests
 
 | 경로 | 내용 |
 |---|---|
-| [slides/](slides/README.md) | 발표 deck 71장(`index.html`). 공개판이라 발표 노트는 뺐다. |
+| [slides/](slides/README.md) | 발표 deck 74장(`index.html`). 공개판이라 발표 노트는 뺐다. |
 | `manuals/*.html` | 스킬 3종의 설명서 페이지([token-efficiency-summary](manuals/token-efficiency-summary.html) · [loop-spec](manuals/loop-spec.html) · [graph-plan](manuals/graph-plan.html)). |
 | `demos/` | 발표 데모 3종(token · loop · graph)의 결과 페이지. 맨 위 한 화면에 결론과 숫자 셋을 두고, 긴 기록은 접어 두었다. |
 | [token-efficiency-summary/](token-efficiency-summary/README.md) · [loop-spec/](loop-spec/README.md) · [graph-plan/](graph-plan/README.md) | 발표에서 사용한 스킬 3종. 각 폴더의 README와 SKILL.md가 사용법이다. |
