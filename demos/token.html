@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>토큰 최적화 데모</title>
+  <meta name="description" content="Claude Code 30일 기록 진단, 수정 세 개, 같은 과제 18 run으로 비교한 결과">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function () { var t = null; try { t = localStorage.getItem('viz-theme'); } catch (e) {}
+  if (t !== 'dark' && t !== 'light') { try { t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { t = 'light'; } }
+  document.documentElement.className = 'theme-' + t; })();</script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html.theme-light {
+  --bg: #FAFAF9; --surface: #FFFFFF; --surface-hover: #F3F3F1; --border: rgba(0,0,0,0.11);
+  --text: #0f172a; --text-secondary: #556070;
+  --accent: #2563eb; --accent-secondary: #7c3aed;
+  --positive: #047857; --negative: #be123c; --warning: #a16207;
+  --code-bg: #f3f3f1; --hl-bg: #eef4ff; --soft: #f4f6fa;
+  --add-bg: rgba(4,120,87,0.10); --del-bg: rgba(190,18,60,0.09);
+  --before: #94a3b8; --single: #d97706; --graph: #2563eb;
+  --sev-high: #be123c; --sev-medium: #ea580c; --sev-low: #ca8a04; --sev-info: #64748b; --sev-bad: #e2e8f0;
+}
+html.theme-dark {
+  --bg: #0A0A0A; --surface: #141414; --surface-hover: #1E1E1E; --border: rgba(255,255,255,0.13);
+  --text: #EDEDED; --text-secondary: #a3a3a3;
+  --accent: #60a5fa; --accent-secondary: #a78bfa;
+  --positive: #34d399; --negative: #fb7185; --warning: #fbbf24;
+  --code-bg: #101010; --hl-bg: #0f1b2e; --soft: #161a22;
+  --add-bg: rgba(52,211,153,0.12); --del-bg: rgba(251,113,133,0.12);
+  --before: #64748b; --single: #f59e0b; --graph: #60a5fa;
+  --sev-high: #fb7185; --sev-medium: #fb923c; --sev-low: #facc15; --sev-info: #94a3b8; --sev-bad: #334155;
+}
+body { font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text);
+  font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+h1, h2, h3, h4 { color: var(--text); letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; }
+h1 { font-size: 2.25rem; font-weight: 800; }
+h2 { font-size: 1.75rem; font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 700; }
+h4 { font-size: 1.125rem; font-weight: 700; }
+p, li, td, th, dd, dt, summary { font-size: 1rem; }
+.muted { color: var(--text-secondary); }
+code, pre { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1rem; }
+code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre code { background: none; padding: 0; }
+a { color: var(--accent); }
+b, strong { font-weight: 700; }
+.num-i { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+main section { margin-bottom: 64px; }
+
+/* ① one-screen summary */
+.hero { min-height: 100vh; max-height: 720px; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 40px 0 32px; margin-bottom: 24px !important; }
+.kicker { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; color: var(--text-secondary); }
+.kicker b { color: var(--text); }
+.hero h1 { max-width: 960px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.stat .label { color: var(--text-secondary); font-weight: 500; }
+.stat .ba { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 2.25rem; line-height: 1.2; margin: 4px 0 2px; white-space: nowrap; }
+.stat .ba .from { color: var(--text-secondary); font-weight: 600; font-size: 1.5rem; }
+.stat .ba .arrow { color: var(--text-secondary); font-weight: 500; font-size: 1.5rem; margin: 0 6px; }
+.stat .ba .vs { color: var(--text-secondary); font-weight: 500; font-size: 1.25rem; margin: 0 6px; }
+.stat .delta { font-weight: 700; }
+.good { color: var(--positive); } .bad { color: var(--negative); } .flat { color: var(--text-secondary); } .warn { color: var(--warning); }
+.do { background: var(--hl-bg); border-left: 4px solid var(--accent); border-radius: 6px; padding: 12px 16px; font-size: 1.0625rem; }
+.do b { color: var(--accent); }
+.tag { display: inline-block; font-size: 1rem; font-weight: 600; padding: 0 8px; border-radius: 999px; border: 1.5px solid currentColor; line-height: 1.5; white-space: nowrap; }
+.tag.rec { color: var(--accent); } .tag.exp { color: var(--positive); } .tag.est { color: var(--warning); }
+
+/* section head */
+.sec-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.sec-num { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); font-size: 1.25rem; }
+.lead { font-size: 1.1875rem; font-weight: 600; margin-bottom: 20px; max-width: 920px; }
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 22px; margin-top: 18px; }
+.terms p { color: var(--text-secondary); border-left: 3px solid var(--border); padding-left: 12px; }
+.terms p b { color: var(--text); }
+.note { color: var(--text-secondary); margin-top: 12px; }
+
+/* flow diagram (HTML boxes + arrows; wraps to a column on phones) */
+.flow { display: flex; align-items: stretch; }
+.flow > .node { flex: 1 1 0; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.flow > .node.wide { flex-grow: 2.4; }
+.flow > .node.hot { border: 2px solid var(--accent); background: var(--hl-bg); }
+.flow > .node.end { border-style: dashed; }
+.flow > .arr { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.flow > .arr svg { width: 22px; height: 22px; }
+.node .k { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); }
+.node b { display: block; font-size: 1.0625rem; line-height: 1.4; }
+.node .s { color: var(--text-secondary); line-height: 1.5; margin-top: 4px; }
+.node .s code { font-size: 1rem; }
+.node ol, .node ul { margin: 4px 0 0 1.2em; color: var(--text-secondary); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 0 10px; white-space: nowrap; }
+.lanes { display: grid; gap: 12px; }
+.lane { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; }
+.lane .who { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; font-size: 1.125rem; }
+.lane .who span { display: block; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; font-size: 1rem; color: var(--text-secondary); }
+.who.c-single { color: var(--single); } .who.c-graph { color: var(--graph); } .who.c-loop { color: var(--accent-secondary); } .who.c-base { color: var(--text-secondary); }
+.goal { background: var(--soft); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; }
+.goal b { color: var(--accent); }
+.split { display: grid; gap: 6px; margin-top: 6px; }
+.split > div { border-radius: 8px; padding: 6px 10px; border: 1px solid var(--border); }
+.split .ok { background: var(--add-bg); } .split .no { background: var(--del-bg); }
+.split b { display: inline; font-size: 1rem; }
+
+/* ③ results: table + chart side by side */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+thead th { font-weight: 600; color: var(--text-secondary); }
+tbody th { font-weight: 600; }
+td.r, th.r, td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.t td.r b { font-size: 1.0625rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.chart .ttl { font-weight: 700; margin-bottom: 8px; }
+.brow { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; align-items: center; margin: 7px 0; }
+.brow .bl { color: var(--text-secondary); white-space: nowrap; }
+.brow .bv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.track { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--accent); }
+.fill.base { background: var(--before); } .fill.single { background: var(--single); } .fill.loop { background: var(--accent-secondary); } .fill.graph { background: var(--graph); }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.high { background: var(--sev-high); } .seg.medium { background: var(--sev-medium); } .seg.low { background: var(--sev-low); } .seg.info { background: var(--sev-info); }
+.seg.bad { background: repeating-linear-gradient(45deg, var(--sev-bad), var(--sev-bad) 4px, transparent 4px, transparent 8px); outline: 1px solid var(--border); outline-offset: -1px; }
+.track .seg:first-child { border-radius: 6px 0 0 6px; }
+.whisker { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--text); }
+.whisker::before, .whisker::after { content: ''; position: absolute; top: -6px; width: 2px; height: 14px; background: var(--text); }
+.whisker::before { left: 0; } .whisker::after { right: 0; }
+.target { position: absolute; top: -5px; bottom: -5px; border-left: 2px dashed var(--negative); }
+.grp { font-weight: 700; margin-top: 12px; }
+.grp:first-of-type { margin-top: 0; }
+.axis { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; color: var(--text-secondary); margin-top: 4px; }
+.axis .ticks { position: relative; height: 1.6em; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.axis .ticks span:first-child { transform: none; }
+.axis .ticks span:last-child { transform: translateX(-100%); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-secondary); margin-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.legend i.ring { border-radius: 50%; border: 3px solid var(--negative); }
+.legend i.dash { width: 0; height: 16px; border-left: 2px dashed var(--negative); border-radius: 0; }
+.strip .track { height: 30px; }
+.dot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); }
+.dot.before { background: var(--before); }
+.dot.fail { background: var(--bg); border: 3px solid var(--negative); }
+
+/* ④ why */
+.why-line { font-size: 1.125rem; font-weight: 600; margin-top: 14px; }
+.cov { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 22px; }
+.cov figure { margin: 0; }
+.cov svg { display: block; width: 100%; height: auto; max-width: 170px; margin: 0 auto; }
+.cov figcaption { text-align: center; margin-top: 8px; line-height: 1.45; }
+.cov figcaption b { display: block; font-size: 1.125rem; }
+.cv-on { fill: var(--accent); } .cv-on.s { fill: var(--single); }
+.cv-off { fill: none; stroke: var(--text-secondary); stroke-width: 0.8; stroke-dasharray: 1.6 1.2; opacity: 0.7; }
+.cause { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.cause > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.cause b { display: block; }
+
+/* ⑤ so */
+ol.so { list-style: none; counter-reset: so; display: grid; gap: 10px; }
+ol.so li { counter-increment: so; position: relative; padding: 14px 18px 14px 62px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 1.125rem; }
+ol.so li::before { content: counter(so); position: absolute; left: 18px; top: 13px; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+ol.so li span { display: block; color: var(--text-secondary); font-size: 1rem; margin-top: 2px; }
+.bridge { color: var(--text-secondary); margin-top: 16px; font-style: normal; }
+
+/* ⑥ collapsed records */
+details { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+details > summary { cursor: pointer; font-weight: 600; padding: 12px 16px; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '+'; font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); width: 1em; flex: none; }
+details[open] > summary::before { content: '−'; }
+details > .body, details > .dbody { padding: 4px 16px 18px; display: block; }
+.body > * + *, .dbody > * + * { margin-top: 14px; }
+.body h3 { margin-top: 22px; } .body h4 { margin-top: 18px; }
+details details { background: var(--bg); }
+pre, pre.block, pre.code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; line-height: 1.55; overflow-x: auto; }
+pre.block .add { background: var(--add-bg); display: block; } pre.block .del { background: var(--del-bg); display: block; }
+.copy { float: right; font-size: 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 0 10px; cursor: pointer; font-family: inherit; margin-left: 8px; }
+.look { background: var(--soft); border-radius: 10px; padding: 14px 18px; }
+.look h3 { font-size: 1.0625rem; color: var(--accent); margin: 0 0 6px; letter-spacing: 0; }
+.look ol { padding-left: 1.3em; }
+ul.plain, .body ul, .dbody ul { padding-left: 1.2em; display: grid; gap: 6px; }
+.body ol, .dbody ol { padding-left: 1.3em; }
+dl.rc { display: grid; grid-template-columns: 180px 1fr; }
+dl.rc dt, dl.rc dd { padding: 8px 4px; border-bottom: 1px solid var(--border); }
+dl.rc dt { color: var(--text-secondary); }
+.rc dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+.rc dt { color: var(--text-secondary); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+tr.keep td { background: var(--add-bg); }
+.badge { display: inline-block; font-weight: 700; font-size: 1rem; padding: 0 8px; border-radius: 4px; white-space: nowrap; }
+.badge.keep, .badge.done { color: var(--positive); background: var(--add-bg); }
+.badge.reject, .badge.blocked { color: var(--negative); background: var(--del-bg); }
+.badge.cont { color: var(--warning); background: var(--soft); }
+.pass { color: var(--positive); font-weight: 700; } .fail { color: var(--negative); font-weight: 700; }
+.q-yes { color: var(--positive); font-weight: 700; } .q-no { color: var(--negative); font-weight: 700; }
+.decide { background: var(--soft); }
+.shot { width: 100%; border: 1px solid var(--border); border-radius: 8px; display: block; }
+.tl .row { display: grid; grid-template-columns: 9em 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.tl .lab { color: var(--text-secondary); }
+.tl .bar { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.tl .seg { border-radius: 6px; display: flex; align-items: center; padding: 0 8px; color: #fff; white-space: nowrap; overflow: hidden; }
+.tl .axis { display: grid; grid-template-columns: 9em 1fr; gap: 10px; }
+.foot { color: var(--text-secondary); margin-top: 18px; }
+
+/* menu */
+.viz-menu { position: fixed; top: 12px; right: 12px; z-index: 40; }
+.viz-menu-toggle { width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.viz-menu-dropdown { position: absolute; top: 52px; right: 0; min-width: 190px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: none; }
+.viz-menu-dropdown.open { display: block; }
+.viz-menu-dropdown button { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; background: transparent; color: var(--text); font-size: 1rem; font-family: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; }
+.viz-menu-dropdown button:hover { background: var(--surface-hover); }
+.skip-to-content { position: absolute; top: -60px; left: 6px; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 4px; z-index: 60; }
+.skip-to-content:focus { top: 6px; }
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .viz-menu { display: none; }
+  .hero { min-height: auto; }
+  .card, .flow > .node, ol.so li { break-inside: avoid; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@media (max-width: 960px) {
+  .duo { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .stat { padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px; }
+  .stat .ba { font-size: 1.75rem; margin: 0; }
+  .stat .ba .from, .stat .ba .arrow, .stat .ba .vs { font-size: 1.125rem; }
+  .stat .delta { grid-column: 1 / -1; }
+  .flow { flex-direction: column; }
+  .flow > .arr { width: auto; height: 26px; }
+  .flow > .arr svg { transform: rotate(90deg); }
+  .lane { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .lane .who span { display: inline; margin-left: 6px; }
+  .cov { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cause, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td { display: block; width: 100%; }
+  table.stack thead { display: none; }
+  table.stack tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
+  table.stack th, table.stack td { border: 0; padding: 2px 0; text-align: left; white-space: normal; }
+  table.stack td[data-label]::before { content: attr(data-label) " · "; color: var(--text-secondary); }
+  table.stack td[data-k]::before { content: attr(data-k) " "; font-weight: 700; color: var(--text-secondary); }
+}
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px 64px; }
+  .hero { max-height: none; gap: 12px; padding: 60px 0 16px; justify-content: flex-start; }
+  .hero h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.4rem; }
+  .lead { font-size: 1.0625rem; }
+  .do { padding: 8px 12px; font-size: 1rem; }
+  .stat .ba { font-size: 1.5rem; }
+  .brow, .axis { grid-template-columns: 5.2em minmax(0, 1fr) 4.6em; gap: 6px; }
+  .card { padding: 12px; }
+  ol.so li { padding: 12px 14px 12px 54px; font-size: 1.0625rem; }
+  ol.so li::before { left: 14px; }
+  dl.rc { grid-template-columns: 1fr; }
+  .rc dl { grid-template-columns: 1fr; }
+  .tl .row, .tl .axis { grid-template-columns: 6em 1fr; }
+}
+@media (max-width: 375px) { body { overflow-x: hidden; } }
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-to-content">본문으로 건너뛰기</a>
+<div class="viz-menu">
+  <button class="viz-menu-toggle" type="button" onclick="toggleMenu()" aria-label="메뉴"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg></button>
+  <div class="viz-menu-dropdown" id="vizMenuDropdown">
+    <button type="button" onclick="cycleTheme()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="themeLabel">다크 모드</span></button>
+    <button type="button" onclick="downloadImage()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg><span>PNG로 저장</span></button>
+    <button type="button" onclick="window.print()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/></svg><span>인쇄 / PDF</span></button>
+  </div>
+</div>
+<button class="present-btn" type="button">발표 모드 (P)</button>
+<main id="main-content" class="wrap">
+<section id="summary" data-stop="요약" class="hero" aria-label="요약">
+
+<div class="kicker"><b>데모 1 · 토큰</b><span class="tag exp">실험</span><span>실제 과제 3개 × 3번 × 수정 전·후 = 18번 자동 실행 · claude-opus-5-5 · effort xhigh</span></div>
+<h1>설정 세 개만 붙여도 같은 과제를 더 싸게, 덜 실패하며 끝냈습니다. 다만 진단 1위 수정은 효과가 없었습니다.</h1>
+<div class="stats">
+  <div class="stat"><div class="label">통과 (숨긴 테스트 기준)</div><div class="ba"><span class="from">7/9</span><span class="arrow">→</span>9/9</div><div class="delta good">실패 2번 → 0번</div></div>
+  <div class="stat"><div class="label">run 1번 비용 (중앙값)</div><div class="ba"><span class="from">$2.13</span><span class="arrow">→</span>$1.90</div><div class="delta good">−11%</div></div>
+  <div class="stat"><div class="label">성공 1건당 비용 (실패한 run 값 포함)</div><div class="ba"><span class="from">$3.02</span><span class="arrow">→</span>$1.74</div><div class="delta good">−42%</div></div>
+</div>
+<p class="do"><b>해 볼 것:</b> 내 30일 기록에 <code>/token-efficiency-summary</code>를 돌리고, 상위 세 개를 켠 뒤 같은 과제로 다시 재 보세요. 추정 1위가 내 작업의 1위는 아닐 수 있습니다.</p>
+
+<aside class="speaker-notes" hidden><p>첫 번째 데모는 token입니다. 제 프로젝트의 30일 사용 기록을 스킬로 진단하고, 고칠 거리 상위 세 개를 켠 다음, 실제로 있었던 과제 세 개를 세 번씩, 수정 전과 후로 다시 시켰습니다. 모두 18번이고, 사람은 한 번도 끼어들지 않았습니다.</p><p>결과는 화면의 세 숫자입니다. 통과가 아홉 번 중 일곱 번에서 아홉 번 모두로 늘었고, run 한 번 비용의 중앙값은 11% 줄었습니다. 실패한 run에 쓴 돈까지 성공 수로 나누면 3.02달러에서 1.74달러입니다. 그런데 진단이 1위로 꼽은 수정은 효과가 없었습니다. 그 이야기를 뒤에서 하겠습니다.</p><p>참고 — 평균 −26%는 T1 수정 전의 $5.63 run 하나에 끌린 값이라 헤드라인은 중앙값. 두 조건 모두 같은 모델·effort·commit.</p></aside>
+</section>
+<section id="how" data-stop="어떻게 했나" aria-label="어떻게 했나">
+<div class="sec-head"><span class="sec-num">02</span><h2>어떻게 했나</h2></div><p class="lead">진단하고, 상위 세 개를 고치고, 같은 과제로 다시 쟀습니다. 사용자 설정 파일은 건드리지 않고 실행할 때만 붙였습니다.</p><div class="flow" role="group" aria-label="토큰 데모 진행 순서"><div class="node "><span class="k">1</span><b>30일 기록 진단</b><div class="s">스킬이 비용과 고칠 거리를 대시보드로 정리</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node hot wide"><span class="k">2</span><b>상위 3개 수정</b><ol><li>subagent cache 1시간 유지</li><li>안 쓰는 skill·MCP 목록 빼기</li><li>prompt에 "작업 지도" 한 문단</li></ol></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><span class="k">3</span><b>같은 과제 다시 시키기</b><div class="s">실제 과제 3개 × 3번<br>수정 전 9 run · 수정 후 9 run</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><span class="k">4</span><b>채점</b><div class="s">숨겨 둔 테스트 + 타입 검사<br>비용은 call마다 합산</div></div></div><div class="terms"><p><b>run</b>: 과제 하나를 사람 없이 자동으로 한 번 실행한 것.</p><p><b>통과</b>: 그 과제를 고친 commit의 테스트(미리 숨겨 둠)가 통과하고, 새 실패가 없을 때.</p><p><b>cache</b>: 매번 앞에 붙는 같은 내용을 저장해 두고 싸게 다시 읽는 기능. 저장이 살아 있는 시간을 TTL이라 합니다.</p></div>
+<aside class="speaker-notes" hidden><p>방법은 네 단계입니다. 먼저 스킬로 30일 기록을 진단했습니다. 30일 동안 약 천 달러를 썼고, 대시보드가 고칠 거리를 들이는 노력 대비 아끼는 돈 순서로 보여 줬습니다. 그중 실행할 때마다 켤 수 있는 상위 세 개를 골랐습니다.</p><p>세 수정은 이렇습니다. subagent의 cache를 1시간 동안 살려 두기, 쓰지 않는 skill과 MCP 목록 빼기, 그리고 prompt 끝에 먼저 볼 파일과 테스트를 적은 &#x27;작업 지도&#x27; 한 문단입니다. 그다음 실제로 있었던 과제 세 개를, 고친 commit 바로 앞에서 그대로 다시 시켰고, 숨겨 둔 테스트로 채점했습니다.</p><p>참고 — 30일: $1,010, cache가 없었다면 $8,918, 중간에 cache가 깨져 더 낸 돈 171번 $173. ROI 추정 ① 최대 $55.77/30일 ② $27.22 ③ $10.79. 뺀 것: /compact 습관·과제마다 새 session(실행마다 켤 수 없음), 더 싼 모델(모델 고정).</p></aside>
+</section>
+<section id="result" data-stop="결과" aria-label="결과">
+<div class="sec-head"><span class="sec-num">03</span><h2>결과</h2></div><p class="lead">통과는 늘고 비용은 줄었습니다. 줄어든 폭은 짧은 과제(T2)에서 가장 컸습니다.</p><div class="duo"><div><table class="t"><thead><tr><th>지표</th><th class="r">수정 전</th><th class="r">수정 후</th><th class="r">차이</th></tr></thead><tbody><tr><th scope="row">통과 (9 run 중)</th><td class="r">7</td><td class="r"><b>9</b></td><td class="r good">+2</td></tr><tr><th scope="row">run 1번 비용, 중앙값</th><td class="r">$2.13</td><td class="r"><b>$1.90</b></td><td class="r good">−11%</td></tr><tr><th scope="row">성공 1건당 비용</th><td class="r">$3.02</td><td class="r"><b>$1.74</b></td><td class="r good">−42%</td></tr><tr><th scope="row">token, 중앙값</th><td class="r">2.2M</td><td class="r"><b>2.0M</b></td><td class="r good">−12%</td></tr><tr><th scope="row">같은 파일 다시 읽기, 평균</th><td class="r">7.6번</td><td class="r"><b>3.9번</b></td><td class="r good">−49%</td></tr></tbody></table><p class="note">성공 1건당 비용은 실패한 run에 쓴 돈까지 더해 성공 수로 나눈 값입니다.</p></div><div class="card chart strip" role="img" aria-label="과제별 run 비용 점 그림. 점 하나가 run 하나. T2는 수정 후 세 번 모두 더 쌌고, T1 수정 전은 두 번 실패, 한 번 5.63달러로 성공"><div class="ttl">run 18개의 비용 (점 하나 = run 하나)</div><div class="brow"><span class="bl">T1 · 수정 전</span><div class="track"><span class="dot before" style="left:93.84%" title="$5.63"></span><span class="dot before fail" style="left:35.54%" title="$2.13 · 실패"></span><span class="dot before fail" style="left:35.83%" title="$2.15 · 실패"></span></div><span class="bv">1/3 통과</span></div><div class="brow"><span class="bl">T1 · 수정 후</span><div class="track"><span class="dot " style="left:49.19%" title="$2.95"></span><span class="dot " style="left:37.20%" title="$2.23"></span><span class="dot " style="left:38.62%" title="$2.32"></span></div><span class="bv">3/3 통과</span></div><div class="brow"><span class="bl">T2 · 수정 전</span><div class="track"><span class="dot before" style="left:26.45%" title="$1.59"></span><span class="dot before" style="left:27.74%" title="$1.66"></span><span class="dot before" style="left:20.53%" title="$1.23"></span></div><span class="bv">3/3 통과</span></div><div class="brow"><span class="bl">T2 · 수정 후</span><div class="track"><span class="dot " style="left:13.00%" title="$0.78"></span><span class="dot " style="left:14.72%" title="$0.88"></span><span class="dot " style="left:13.23%" title="$0.79"></span></div><span class="bv">3/3 통과</span></div><div class="brow"><span class="bl">T3 · 수정 전</span><div class="track"><span class="dot before" style="left:41.69%" title="$2.50"></span><span class="dot before" style="left:33.48%" title="$2.01"></span><span class="dot before" style="left:37.01%" title="$2.22"></span></div><span class="bv">3/3 통과</span></div><div class="brow"><span class="bl">T3 · 수정 후</span><div class="track"><span class="dot " style="left:35.11%" title="$2.11"></span><span class="dot " style="left:28.43%" title="$1.71"></span><span class="dot " style="left:31.68%" title="$1.90"></span></div><span class="bv">3/3 통과</span></div><div class="axis" aria-hidden="true"><span></span><div class="ticks"><span style="left:0.00%">$0</span><span style="left:33.33%">$2</span><span style="left:66.67%">$4</span><span style="left:100.00%">$6</span></div><span></span></div><div class="legend"><span><i style="background:var(--before)"></i>수정 전</span><span><i style="background:var(--accent)"></i>수정 후</span><span><i class="ring"></i>실패한 run</span></div></div></div>
+<aside class="speaker-notes" hidden><p>왼쪽 표부터 보겠습니다. 통과가 일곱에서 아홉으로 늘었고, run 한 번 비용의 중앙값은 2.13달러에서 1.90달러로 11% 줄었습니다. 실패한 run에 쓴 돈까지 성공 수로 나누면 3.02달러에서 1.74달러입니다. 목표는 token이 아니라 성공 1건당 비용입니다.</p><p>오른쪽은 점 하나가 run 하나입니다. T2, 메인 session이 직접 한 짧은 수정은 세 번 모두 수정 후가 더 쌌습니다. 매번 붙는 고정된 앞부분이 비용에서 차지하는 몫이 커서입니다. T1의 수정 전은 두 번 싸게 실패하고 한 번 비싸게 성공했습니다. 평균만 보면 싸게 실패한 run이 좋아 보입니다.</p><p>참고 — 비용 평균 −26%, token 평균 −46%는 $5.63 run 하나에 끌림(빼면 평균 −10%). 통과 차이 7/9 → 9/9는 Fisher 정확 검정 p≈0.47, 우연일 수 있음. 과하게 깎은 신호(다시 읽기·재실행 증가)는 없었음.</p></aside>
+</section>
+<section id="why" data-stop="왜 그렇게 나왔나" aria-label="왜 그렇게 나왔나">
+<div class="sec-head"><span class="sec-num">04</span><h2>왜 그렇게 나왔나</h2></div><p class="lead">진단 1위였던 "cache 1시간"은 이번 재실행에서 일할 자리가 없었습니다.</p><div class="card chart" role="img" aria-label="call 사이 간격과 5분 cache 수명. 30일 기록에서는 긴 도구 실행 뒤 5분을 넘겨 104번 깨졌고, 이번 재실행에서는 가장 긴 간격이 226초라 한 번도 넘지 않았다"><div class="ttl">call 사이 간격과 5분 cache 수명</div><div class="brow"><span class="bl">30일 기록</span><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--negative) 55%,transparent)"></div><div class="target" style="left:62.50%"></div></div><span class="bv bad">104번 넘김</span></div><div class="brow"><span class="bl">이번 재실행</span><div class="track"><div class="fill" style="width:47.08%;background:var(--positive)"></div><div class="target" style="left:62.50%"></div></div><span class="bv good">0번</span></div><div class="axis" aria-hidden="true"><span></span><div class="ticks"><span style="left:0.00%">0분</span><span style="left:62.50%">5분</span><span style="left:100.00%">8분</span></div><span></span></div><div class="legend"><span><i class="dash"></i>cache가 식는 선 (5분)</span><span>30일 기록은 긴 lint·테스트를 기다리다 선을 넘었고, 재실행은 가장 길어도 226초였습니다.</span></div></div><p class="why-line">추정 1위가 내 작업의 1위는 아닙니다. 켜고, 같은 과제로 다시 재야 압니다.</p>
+<aside class="speaker-notes" hidden><p>가장 예상 밖이었던 건 1위 수정입니다. 30일 기록에서는 subagent의 cache가 5분 수명을 넘겨 104번 다시 저장됐고, 그래서 1시간으로 늘리는 게 ROI 1위였습니다. 그런데 그 104번 중 84번은 긴 lint나 테스트를 기다린 뒤에 생겼습니다.</p><p>재실행 환경은 조용했습니다. 검증 한 번이 2분 안팎에 끝나서 call 사이 간격이 가장 길어도 226초였습니다. 5분 선을 한 번도 넘지 않았으니 깨질 cache가 없었고, 1시간 저장 값만 run당 18센트쯤 더 냈습니다. 진단은 어디를 볼지 알려 주고, 효과는 같은 과제로 다시 재야 압니다.</p><p>참고 — 짧아진 앞부분(prefix)은 run당 약 $0.23 절약(첫 call 62,893 → 49,040 token). 나머지는 call·파일 읽기가 줄어든 몫인데 작업 지도 몫과 나누지 않음. 세 수정을 함께 켜서 수정별 몫은 따로 재지 않음.</p></aside>
+</section>
+<section id="so" data-stop="그래서" aria-label="그래서">
+<div class="sec-head"><span class="sec-num">05</span><h2>그래서</h2></div><ol class="so"><li>진단은 지도일 뿐입니다. 상위 세 개를 켜고 같은 과제로 다시 재세요.<span>추정 1위가 내 작업에서는 효과 0일 수 있습니다.</span></li><li>run 한 번 비용보다 성공 1건당 비용을 보세요.<span>싸게 실패한 run이 평균을 좋아 보이게 만듭니다.</span></li><li>짧은 과제가 많다면 매번 실려 가는 목록부터 빼세요.<span>안 쓰는 skill·MCP 목록이 모든 call에 붙어 다닙니다.</span></li></ol><p class="bridge">다음 데모: 비용을 감당할 수 있게 됐으면, 사람 없이 오래 돌립니다. 끝났다는 건 누가 판정할까요?</p>
+<aside class="speaker-notes" hidden><p>가져가실 것은 세 가지입니다. 첫째, 진단 결과는 지도이지 답이 아닙니다. 상위 세 개를 켜고 같은 과제로 다시 재 보세요. 둘째, run 한 번 비용이 아니라 성공 1건당 비용을 보세요. 셋째, 짧은 과제가 많은 분은 매번 실려 가는 skill과 MCP 목록부터 빼 보세요.</p><p>비용을 감당할 수 있게 됐으면, 이제 사람 없이 오래 돌립니다. 그런데 끝났다는 건 누가 판정할까요? 다음 데모는 loop입니다.</p><p>참고 — 한계: 과제 3개 × 3번이라 N이 작음. 두 조건 모두 hook을 껐음(안전 장치). lint·테스트가 긴 평소 환경이면 TTL 결과는 달라질 수 있음.</p></aside>
+</section>
+<section id="records" data-stop="자세한 기록" aria-label="자세한 기록">
+<div class="sec-head"><span class="sec-num">06</span><h2>자세한 기록</h2></div><p class="lead">명령, 대시보드, 수정 코드, 과제 원문, run별 기록은 접어 두었습니다.</p><details><summary>스킬 명령 · 말로 부르는 버전 · 측정기를 먼저 고친 이유</summary><div class="body"><pre class="block"><button class="copy" type="button" onclick="copyText(this)">복사</button>/token-efficiency-summary --last 30d --aggregate --project autokliq --dashboard token-dashboard.html</pre><div class="body">
+        <pre class="block"><button class="copy" onclick="copyText(this)">복사</button>최근 30일 autokliq 프로젝트에서 Claude Code 비용이 어디로 갔는지 집계하고, 고칠 거리를 ROI 순으로 정리한 대시보드를 token-dashboard.html로 만들어 줘.</pre>
+        <p>스킬은 이 요청을 아래 분석기 명령으로 바꿔 실행한다. 데모에서는 사용자 설정 폴더에 설치하지 않으려고 같은 명령을 분석기(v1.1.0, 테스트 33개 통과)에 직접 줬다.</p>
+        <pre class="block">python3 ~/.claude/scripts/analyze-tokens.py --last 30d --aggregate --project autokliq \
+  --dashboard token-dashboard.html --format json</pre>
+        <p><b>측정기를 먼저 고친 이유.</b> 고치기 전 분석기(v1.0.1)는 같은 30일에 "낭비" $1,360.89를 보고했다. 실제 비용 $938.88의 1.45배다. 패턴끼리 같은 토큰을 겹쳐 셌고, 1시간 cache write를 5분 가격으로 계산해 비용도 낮게 잡았다. 손질한 run에서도 "prefix 과다"가 7/7 떴고, Bash로 한 <code>grep</code>·<code>find</code>·<code>rg</code>는 탐색으로 세지 않았다.</p>
+        <p>v1.1.0은 call마다 실제로 낸 돈에서 한 번만 떼어 패턴에 준다. 그래서 "낭비" 합계가 $161.41(비용의 16%)로 내려왔고, 실제 비용을 넘을 수 없다. CLI가 보고한 비용과는 21 run 중 19 run이 센트까지 맞았다(나머지 2 run은 재시도 요청이 기록에 없다).</p>
+      </div></div></details><details><summary>30일 대시보드 핵심 수치와 ROI 상위</summary><div class="body"><p><img class="shot" src="assets/token/dashboard.png" alt="스킬이 만든 30일 대시보드 화면" loading="lazy"></p><table class="stack"><thead><tr><th>항목</th><th>값</th></tr></thead><tbody><tr><th scope="row">30일 총비용</th><td data-label="값">$1,009.53 · 76 session + subagent 52개 · cache가 없었다면 $8,918 (8.8배)</td></tr><tr><th scope="row">비용 구성</th><td data-label="값">cache read $443(44%) · cache write $373(37%) · output $193(19%) · input $0.11</td></tr><tr><th scope="row">cache가 깨져 더 낸 돈</th><td data-label="값">171번 $172.55: subagent 5분 만료 104번 $102 · 1시간 넘게 쉼 37번 $57 · prompt 변경 29번 $12 · 모델 전환 1번 $0.74 <span class="tag est">추정</span></td></tr><tr><th scope="row">ROI 상위 (고른 3개)</th><td data-label="값">① subagent TTL 1시간 최대 $55.77 · ② 안 쓰는 skill·MCP 빼기 $27.22 · ③ 작업 지도 $10.79 (30일, 상한) <span class="tag est">추정</span></td></tr><tr><th scope="row">뺀 것</th><td data-label="값">쉬기 전 /compact($58.55)·과제마다 새 session($69.27)은 습관이라 실행마다 켤 수 없음. 더 싼 모델($45.56)은 모델을 바꿈. 큰 도구 출력 줄이기($8.83)는 대부분 브라우저 스크린샷.</td></tr></tbody></table><p><a href="assets/token/dashboard.html">스킬이 만든 대시보드 전체 열기</a> (공개용 사본: session ID, 파일 경로, prompt 내용 없음)</p></div></details><details><summary>세 수정의 전체 코드 (PR 형식)</summary><div class="body"><div class="body">
+        <p><b>① subagent prompt cache TTL을 1시간으로</b> — 최대 $55.77/30일 <span class="tag est">추정</span></p>
+<pre class="block"><span class="del">- claude -p ...</span><span class="add">+ CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h claude -p ...</span></pre>
+        <p>Why: 30일 동안 subagent cache가 5분 TTL 만료로 104번 깨져 $102.16를 다시 냈다. 1시간 저장이 더 비싼 몫 $46.40을 빼도 순 $55.77이 남는다.</p>
+        <p><b>② 안 쓰는 MCP·skill·plugin을 빼고 시작</b> — 최대 $27.22/30일 <span class="tag est">추정</span></p>
+<pre class="block"><span class="del">- claude -p --settings before.settings.json ...</span><span class="add">+ claude -p --strict-mcp-config --mcp-config empty.mcp.json \
++   --settings after.settings.json ...</span></pre>
+<pre class="block">// after.settings.json (발췌)
+{
+  "disableAllHooks": true,
+  "enabledPlugins": { "code-review@claude-plugins-official": false, "posthog@claude-plugins-official": false, ... },
+  "disableBundledSkills": true,
+  "skillOverrides": { "dev-browser": "off", "eval-writer": "off", ... }   // 사용자·plugin skill 212개
+}
+// empty.mcp.json
+{ "mcpServers": {} }</pre>
+        <p>Why: skill 목록, MCP 안내, 나중에 불러오는 도구 이름이 76개 session 중 74개의 모든 call에 실려 다녔다.</p>
+        <p><b>③ 작업 지도를 붙인 prompt</b> — 최대 $10.79/30일 <span class="tag est">추정</span></p>
+<pre class="block">  &lt;과제 설명&gt;
+<span class="add">+ 작업 지도:
++ - 먼저 볼 파일: &lt;2–3개&gt;
++ - 관련 테스트: `&lt;명령 하나&gt;`
++ - 저장소 전체를 훑지 말고 위 파일에서 시작해. 필요한 부분만 `rg -n`이나 `sed -n`으로 좁혀 읽어.
++ - 넓은 검증(npm run check, npm run lint, npm run test:run)은 끝에 한 번만 돌려.</span></pre>
+        <p>Why: 첫 편집 전 탐색, 같은 도구 반복, 같은 범위 다시 읽기에 귀속된 비용을 줄인다.</p>
+        <p class="muted">두 조건 모두 <code>disableAllHooks: true</code>다. 이 프로젝트의 hook이 실제 API로 이벤트를 보내서 넣은 안전 장치이고, 비교 변수가 아니다.</p>
+      </div></div></details><details><summary>과제 3개와 전체 prompt · 채점 명령</summary><div class="body"><table class="stack"><thead><tr><th>과제</th><th>무엇을 고치나</th><th>왜 이 과제</th></tr></thead><tbody><tr><th scope="row">T1 진행률 SSE 연결 cap</th><td data-label="무엇을">생성 진행률 연결이 10분 제한에 걸려 아직 도는 작업에 '너무 오래 걸림'을 띄운다. 9분에 조용히 닫고 다시 연결하게, 30분 멈춘 작업만 실패로.</td><td data-label="왜">원래 subagent에게 맡겨 긴 검증을 돌린 작업. ①·③이 일하는 자리.</td></tr><tr><th scope="row">T2 실패 없는 단계는 0%로</th><td data-label="무엇을">성능 리포트에서 실패가 0건인 단계가 '—'로 보인다. 측정된 기간이면 0%로.</td><td data-label="왜">메인 session이 직접 하는 짧은 버그 수정. ②·③이 일하는 자리.</td></tr><tr><th scope="row">T3 오래된 영상의 rescue 썸네일 auto-link</th><td data-label="무엇을">나중에 만든 썸네일이 자동 연결 후보에서 빠진다. 같은 영상에서 나온 프로젝트면 기간과 상관없이 후보로.</td><td data-label="왜">원래 subagent에게 맡긴 기능 추가(서비스 파일 3개). ①·③이 일하는 자리.</td></tr></tbody></table><div class="body">
+        <h3>T1 진행률 SSE 연결 cap</h3><p>base commit <code>545c08a633</code> · 채점: <code>vitest run __tests__/api/progress-connection-cap.test.ts</code> 통과 + <code>vitest run __tests__/api features/projects</code> 새 실패 없음 + <code>tsc --noEmit</code> 새 오류 없음</p><p><b>두 조건 공통 prompt</b></p><pre class="block">프로젝트 생성 진행률 SSE(`app/api/projects/[id]/progress/route.ts`)가 10분 cap에 걸리면 terminal complete와 timeout 에러를 보내. 그래서 12–14분 걸리는 6-concept run이 아직 도는데도 GenerationPanel이 &#x27;너무 오래 걸림&#x27;을 띄워. 연결은 9분(3초 틱 180번, Cloud Run 600초 안쪽)에 terminal 이벤트 없이 닫고, 클라이언트가 다시 연결하게 해줘. 진짜 완료와 실패는 지금처럼 끝내. progress가 30분 넘게 안 써진 run(progress의 updatedAt, 없으면 프로젝트 updatedAt 기준)만 기존 timeout 에러로 끝내. 틱마다 하는 기존 DB 조회는 쿼리 체인을 바꾸지 말고 필요한 컬럼만 더 골라. 기존 동작은 깨지면 안 돼.
+
+구현과 검증(npm run check, npm run lint, 관련 테스트, 마지막에 전체 테스트 npm run test:run)은 subagent 하나에게 맡기고, 너는 그 결과를 검토해서 짧게 보고해.
+
+환경 메모: 패키지는 설치하지 마(npm install, npm ci 금지). dev 서버, 브라우저, DB, 네트워크는 쓰지 말고 테스트와 타입 체크로 검증해. 커밋은 하지 마. 이 체크아웃에서는 `npm run check`가 lib/session.ts의 &#x27;iron-session&#x27; 모듈 없음 오류를 하나 내고, 그 모듈을 쓰는 테스트 몇 개가 원래 실패해. 이번 작업과 무관하니 무시해.</pre><p><b>수정 후 조건에만 붙는 작업 지도</b></p><pre class="block">작업 지도:
+- 먼저 볼 파일: `app/api/projects/[id]/progress/route.ts`, `features/projects/GenerationPanel.tsx`, `features/projects/useProjectProgress.ts`
+- 관련 테스트: `npx vitest run __tests__/api/progress-ownership.test.ts`
+- 저장소 전체를 훑지 말고 위 파일에서 시작해. 필요한 부분만 `rg -n`이나 `sed -n`으로 좁혀 읽어.
+- 넓은 검증(npm run check, npm run lint, npm run test:run)은 끝에 한 번만 돌려.</pre>
+<h3>T2 실패 없는 단계는 0%로</h3><p>base commit <code>dc503d274b</code> · 채점: <code>vitest run services/perf-report/__tests__/insight.test.ts</code> 통과 + <code>vitest run services/perf-report features/admin/performance</code> 새 실패 없음 + <code>tsc --noEmit</code> 새 오류 없음</p><p><b>두 조건 공통 prompt</b></p><pre class="block">성능 리포트의 실패 단계 분해에서, 그 기간에 실패가 하나도 없으면 값이 &#x27;—&#x27;로 나와(insight에는 &#x27;15% → —&#x27;처럼 보여). 실패율이 측정된 기간이면 0%로 보여줘. 상세 페이지 표와 insight facts 둘 다.
+
+환경 메모: 패키지는 설치하지 마(npm install, npm ci 금지). dev 서버, 브라우저, DB, 네트워크는 쓰지 말고 테스트와 타입 체크로 검증해. 커밋은 하지 마.</pre><p><b>수정 후 조건에만 붙는 작업 지도</b></p><pre class="block">작업 지도:
+- 먼저 볼 파일: `services/perf-report/metric.ts`, `services/perf-report/insight-facts.ts`, `features/admin/performance/PerfTables.tsx`
+- 관련 테스트: `npx vitest run services/perf-report/__tests__/insight.test.ts`
+- 저장소 전체를 훑지 말고 위 파일에서 시작해. 필요한 부분만 `rg -n`이나 `sed -n`으로 좁혀 읽어.
+- 넓은 검증(npm run check, npm run lint, npm run test:run)은 끝에 한 번만 돌려.</pre>
+<h3>T3 오래된 영상의 rescue 썸네일 auto-link</h3><p>base commit <code>508569ea98</code> · 채점: <code>vitest run services/publication/__tests__/auto-link.test.ts -t &#x27;measures a CTR-rescue thumbnail&#x27;</code> 통과 + <code>vitest run services/publication</code> 새 실패 없음 + <code>tsc --noEmit</code> 새 오류 없음</p><p><b>두 조건 공통 prompt</b></p><pre class="block">publication auto-link가 영상 게시일 ±60일 안에 만든 프로젝트의 렌더만 비교해. 그래서 오래된 영상을 위해 나중에 만든 CTR rescue 썸네일은 연결도 측정도 안 돼. 프로젝트의 source_video_id가 그 영상이면 기간과 상관없이 후보로 쳐줘(후보 concept에 `sourceVideoId`로 실어). hash와 correlation 매칭 방식은 그대로 둬.
+
+구현과 검증(npm run check, npm run lint, 관련 테스트, 마지막에 전체 테스트 npm run test:run)은 subagent 하나에게 맡기고, 너는 그 결과를 검토해서 짧게 보고해.
+
+환경 메모: 패키지는 설치하지 마(npm install, npm ci 금지). dev 서버, 브라우저, DB, 네트워크는 쓰지 말고 테스트와 타입 체크로 검증해. 커밋은 하지 마. 이 체크아웃에서는 `npm run check`가 lib/session.ts의 &#x27;iron-session&#x27; 모듈 없음 오류를 하나 내고, 그 모듈을 쓰는 테스트 몇 개가 원래 실패해. 이번 작업과 무관하니 무시해.</pre><p><b>수정 후 조건에만 붙는 작업 지도</b></p><pre class="block">작업 지도:
+- 먼저 볼 파일: `services/publication/auto-link.ts`, `services/publication/candidates.ts`, `services/publication/hash-renders.ts`
+- 관련 테스트: `npx vitest run services/publication/__tests__/auto-link.test.ts`
+- 저장소 전체를 훑지 말고 위 파일에서 시작해. 필요한 부분만 `rg -n`이나 `sed -n`으로 좁혀 읽어.
+- 넓은 검증(npm run check, npm run lint, npm run test:run)은 끝에 한 번만 돌려.</pre>
+      </div></div></details><details><summary>run 18개의 기록</summary><div class="body"><table class="stack"><thead><tr><th>과제</th><th>조건</th><th>통과</th><th class="r">비용</th><th class="r">token</th><th class="r">call</th><th class="r">시간</th></tr></thead><tbody><tr><th scope="row">T1</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$5.63</td><td data-label="token" class="r">9.3M</td><td data-label="call" class="r">85</td><td data-label="시간" class="r">12.2분</td></tr><tr><th scope="row">T1</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=fail>실패</span></td><td data-label="비용" class="r">$2.13</td><td data-label="token" class="r">2.0M</td><td data-label="call" class="r">23</td><td data-label="시간" class="r">7.1분</td></tr><tr><th scope="row">T1</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=fail>실패</span></td><td data-label="비용" class="r">$2.15</td><td data-label="token" class="r">2.2M</td><td data-label="call" class="r">25</td><td data-label="시간" class="r">7.3분</td></tr><tr><th scope="row">T1</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.95</td><td data-label="token" class="r">2.9M</td><td data-label="call" class="r">33</td><td data-label="시간" class="r">10.2분</td></tr><tr><th scope="row">T1</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.23</td><td data-label="token" class="r">2.3M</td><td data-label="call" class="r">32</td><td data-label="시간" class="r">7.3분</td></tr><tr><th scope="row">T1</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.32</td><td data-label="token" class="r">2.2M</td><td data-label="call" class="r">28</td><td data-label="시간" class="r">12.5분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$1.59</td><td data-label="token" class="r">2.2M</td><td data-label="call" class="r">24</td><td data-label="시간" class="r">8.2분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$1.66</td><td data-label="token" class="r">2.4M</td><td data-label="call" class="r">26</td><td data-label="시간" class="r">11.5분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$1.23</td><td data-label="token" class="r">1.4M</td><td data-label="call" class="r">17</td><td data-label="시간" class="r">9.6분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$0.78</td><td data-label="token" class="r">0.7M</td><td data-label="call" class="r">13</td><td data-label="시간" class="r">6.0분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$0.88</td><td data-label="token" class="r">0.9M</td><td data-label="call" class="r">15</td><td data-label="시간" class="r">8.9분</td></tr><tr><th scope="row">T2</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$0.79</td><td data-label="token" class="r">0.7M</td><td data-label="call" class="r">13</td><td data-label="시간" class="r">6.6분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.50</td><td data-label="token" class="r">3.6M</td><td data-label="call" class="r">36</td><td data-label="시간" class="r">7.4분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.01</td><td data-label="token" class="r">2.2M</td><td data-label="call" class="r">24</td><td data-label="시간" class="r">7.6분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 전</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.22</td><td data-label="token" class="r">2.7M</td><td data-label="call" class="r">29</td><td data-label="시간" class="r">9.3분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$2.11</td><td data-label="token" class="r">2.0M</td><td data-label="call" class="r">26</td><td data-label="시간" class="r">6.4분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$1.71</td><td data-label="token" class="r">1.5M</td><td data-label="call" class="r">21</td><td data-label="시간" class="r">7.3분</td></tr><tr><th scope="row">T3</th><td data-label="조건">수정 후</td><td data-label="통과"><span class=pass>통과</span></td><td data-label="비용" class="r">$1.90</td><td data-label="token" class="r">2.0M</td><td data-label="call" class="r">28</td><td data-label="시간" class="r">5.9분</td></tr></tbody></table><p class="muted">비용 = model call마다(메인 + subagent, 중복 제거) input × $4 + 5분 cache write × $5 + 1시간 cache write × $8 + cache read × $0.20 + output × $20, 100만 token당 claude-opus-5-5 정가. 시간은 claude 실행만이다(채점 제외). CLI가 보고한 비용과 18번 모두 센트까지 맞았다.</p></div></details><details><summary>작은 N과 한계, 수정별 추정 몫</summary><div class="body"><div class="body"><ul style="margin-left:20px"><li><b>N:</b> 과제 3개 × 3번 × 2조건 = 18 run, 같은 기계에서 두 개씩 번갈아 실행했다. 과제별 비교는 3 대 3이다. T2는 세 번 모두 수정 후가 더 쌌다(한쪽 순열 검정 p=0.05). T3는 범위가 조금 겹친다.</li><li><b>평균과 중앙값:</b> 비용 평균 −26%, 중앙값 −11%. 토큰 평균 −46%, 중앙값 −12%. 평균은 T1 수정 전의 비싼 run 하나($5.63, subagent가 subagent를 또 띄움)에 끌린다. 그 run을 빼면 평균 −10%다.</li><li><b>수정별 몫(추정):</b> 짧아진 prefix는 run당 약 $0.23을 줄였다(첫 call이 62,893 → 49,040 토큰). TTL 1시간은 run당 약 $0.18을 늘렸다. 나머지는 call과 파일 읽기가 줄어든 몫인데, 작업 지도 때문인지 짧아진 prefix 때문인지는 나누지 않았다.</li><li><b>조건:</b> 두 조건 모두 hook을 껐다(안전 장치). 조용한 기계라 검증이 빨랐다. 사용자 평소 환경처럼 lint·테스트가 길면 TTL 결과는 달라질 수 있다.</li><li><b>사람 개입:</b> 0회. 모든 run이 자동 실행 한 번으로 끝났고, 권한 거부·오류 종료도 0건이다.</li></ul></div></div></details>
+<aside class="speaker-notes" hidden><p>자세한 기록은 접어 두었습니다. 스킬 명령과 말로 부르는 버전, 30일 대시보드, 세 수정의 전체 코드, 과제 원문과 채점 명령, 그리고 run 18개의 기록이 있습니다. 발표에서는 열지 않습니다. 끝나고 직접 열어 보시면, 같은 방법을 내 기록에 그대로 따라 하실 수 있습니다.</p><p>참고 — 측정: 2026-10-17, autokliq 실제 과제, 매 run 새 복제본·같은 base commit·원격 없음.</p></aside>
+</section>
+
+</main>
+<script>
+function el(id) { return document.getElementById(id); }
+function toggleMenu() { var d = el('vizMenuDropdown'); if (d) d.classList.toggle('open'); }
+document.addEventListener('click', function (e) { if (!e.target.closest('.viz-menu')) { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+var currentTheme = document.documentElement.className === 'theme-dark' ? 'dark' : 'light';
+function applyTheme(t) {
+  document.documentElement.className = 'theme-' + t; currentTheme = t;
+  var l = el('themeLabel'); if (l) l.textContent = t === 'dark' ? '라이트 모드' : '다크 모드';
+  try { localStorage.setItem('viz-theme', t); } catch (e) {}
+}
+function cycleTheme() { applyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+function copyText(btn) {
+  var t = btn.parentNode.textContent.replace(/^(복사됨|복사)/, '').trim();
+  try { navigator.clipboard.writeText(t).then(function () { btn.textContent = '복사됨'; setTimeout(function () { btn.textContent = '복사'; }, 1200); }); } catch (e) {}
+}
+async function downloadImage() {
+  if (typeof htmlToImage === 'undefined') return;
+  var menu = document.querySelector('.viz-menu'); menu.style.display = 'none';
+  try { var url = await htmlToImage.toPng(document.body, { pixelRatio: 2 }); var a = document.createElement('a'); a.href = url; a.download = 'token-demo.png'; a.click(); }
+  catch (e) { console.warn(e); }
+  menu.style.display = '';
+}
+document.addEventListener('DOMContentLoaded', function () { applyTheme(currentTheme); });
+</script>
+<script>
+/* present.js — presenter mode for long single-page docs (skill manuals, demo result pages).
+   Inline this file verbatim at the end of <body>. No dependencies.
+
+   Markup the page provides:
+     - Stops: elements with [data-stop="짧은 제목"] in document order (the one-screen summary is the first stop).
+     - Notes: inside each stop, <aside class="speaker-notes" hidden><p>말할 것…</p><p>참고 — 말하지 않는 부분</p></aside>
+       Notes never show on the page (hidden + CSS below), on screen or in print.
+     - Optional button: <button class="present-btn" type="button">발표 모드 (P)</button> (wired automatically).
+
+   Reading mode (default): keys and scrolling behave normally.
+   Presenting: press P (or the button). A presenter window opens with the notes; the page you share shows no notes.
+     → Space PageDown: next stop · ← PageUp: previous · Home/End · T: restart timer · Esc on the page: leave presenting.
+     Keys work in both windows; both move together. Manual scrolling on the page updates the current stop. */
+(function () {
+  var stops = Array.prototype.slice.call(document.querySelectorAll('[data-stop]'));
+  if (!stops.length) return;
+  var css = document.createElement('style');
+  css.textContent = '.speaker-notes{display:none !important}[data-stop]{scroll-margin-top:12px}' +
+    '.present-btn{position:fixed;right:16px;bottom:16px;z-index:50;font:600 13px/1 Inter,Pretendard,"Noto Sans KR",sans-serif;' +
+    'padding:9px 12px;border-radius:8px;border:1px solid var(--border,rgba(127,127,127,.35));background:var(--surface,#fff);color:var(--text-secondary,#666);cursor:pointer;opacity:.75}' +
+    '.present-btn:hover{opacity:1}body.presenting .present-btn{display:none}' +
+    '@media print{.present-btn{display:none !important}}';
+  document.head.appendChild(css);
+
+  var cur = 0, win = null, t0 = null, tick = null, presenting = false, lock = 0;
+  function title(i) { var s = stops[i]; return s ? (s.getAttribute('data-stop') || '') : ''; }
+  function notes(i) {
+    var box = stops[i] && stops[i].querySelector('.speaker-notes');
+    return box ? Array.prototype.map.call(box.querySelectorAll('p'), function (p) { return p.textContent.trim(); }).filter(Boolean) : [];
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + pad(s % 60); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function go(i) {
+    if (i < 0 || i >= stops.length) return;
+    cur = i; lock = Date.now();
+    stops[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { history.replaceState(null, '', '#stop-' + (i + 1)); } catch (e) {}
+    update();
+  }
+  // manual scrolling: the stop whose top is nearest above the viewport's upper third becomes current
+  window.addEventListener('scroll', function () {
+    if (!presenting || Date.now() - lock < 900) return;
+    var y = window.innerHeight / 3, best = 0;
+    for (var k = 0; k < stops.length; k++) { if (stops[k].getBoundingClientRect().top <= y) best = k; }
+    if (best !== cur) { cur = best; update(); }
+  }, { passive: true });
+
+  function onKey(e) {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'p' || k === 'P') { e.preventDefault(); openPresenter(); return; }
+    if (!presenting) return;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(stops.length - 1); }
+    else if (k === 't' || k === 'T') { t0 = Date.now(); clock(); }
+    else if (k === 'Escape') { presenting = false; document.body.classList.remove('presenting'); }
+  }
+  document.addEventListener('keydown', onKey);
+  Array.prototype.forEach.call(document.querySelectorAll('.present-btn'), function (b) { b.addEventListener('click', openPresenter); });
+
+  function shell() {
+    var styles = Array.prototype.map.call(document.querySelectorAll('style'), function (st) { return st.textContent; }).join('\n');
+    var links = Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) { return l.outerHTML; }).join('');
+    var pv = 'html,body{height:100%;overflow:hidden}body{margin:0 !important;background:#0A0A0A !important;color:#EDEDED !important;' +
+      'font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",Inter,sans-serif;word-break:keep-all}' +
+      '*,*::before,*::after{animation:none !important;transition:none !important}' +
+      '#pv{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px 22px;height:100%;padding:16px 20px;box-sizing:border-box}' +
+      '#pvTop{grid-column:1 / -1;display:flex;align-items:center;gap:16px;font:700 15px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A}' +
+      '#pvTop b{color:#3b82f6;font-size:17px}#pvClock{margin-left:auto;font:800 26px/1 Inter,sans-serif;color:#EDEDED;font-variant-numeric:tabular-nums}' +
+      '#pvL,#pvR{display:flex;flex-direction:column;gap:10px;min-height:0}' +
+      '.lab{font:700 13px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A;letter-spacing:.03em}' +
+      '#pvTitle{font-size:24px;font-weight:700;line-height:1.3;color:#EDEDED}' +
+      '#pvBox{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:8px;outline:1px solid rgba(255,255,255,.14);background:var(--bg,#fff)}' +
+      '#pvBox > .pvpage{position:absolute;left:0;top:0;width:1280px;transform-origin:0 0;pointer-events:none;padding:16px 24px;box-sizing:border-box;color:var(--text)}' +
+      '#pvNotes{flex:1;min-height:0;overflow:auto;padding-right:6px;font-size:23px;line-height:1.65}' +
+      '#pvNotes p{margin:0 0 14px;color:#EDEDED !important}#pvNotes p.ref{font-size:16px;line-height:1.55;color:#8a8a8a !important;border-top:1px solid rgba(255,255,255,.12);padding-top:10px}' +
+      '#pvNext{font-size:17px;color:#9A9A9A;line-height:1.4}#pvNext b{color:#EDEDED}#pvHelp{font-size:12px;color:#777}';
+    return '<!DOCTYPE html><html lang="ko" class="' + document.documentElement.className + '"' +
+      (document.documentElement.getAttribute('data-theme') ? ' data-theme="' + document.documentElement.getAttribute('data-theme') + '"' : '') +
+      '><head><meta charset="UTF-8"><title>' + esc(document.title) + ' · 발표자 보기</title>' + links +
+      '<style>' + styles + '</style><style>' + pv + '</style></head><body>' +
+      '<div id="pv"><div id="pvTop"><b id="pvNum"></b><span id="pvDoc"></span><span id="pvClock">0:00</span></div>' +
+      '<div id="pvL"><div class="lab">지금 공유 화면의 구간 (미리보기)</div><div id="pvBox"></div></div>' +
+      '<div id="pvR"><div id="pvTitle"></div><div class="lab">스피커 노트 · 회색 “참고”는 말하지 않는 부분</div><div id="pvNotes"></div>' +
+      '<div id="pvNext"></div><div id="pvHelp">→ ← 스페이스: 넘기기 · T: 타이머 다시 시작 · 이 창은 공유하지 마세요</div></div></div></body></html>';
+  }
+  function openPresenter() {
+    presenting = true; document.body.classList.add('presenting');
+    var w = null;
+    try { w = window.open('', 'present-' + location.pathname.split('/').pop(), 'width=1180,height=720'); } catch (e) { w = null; }
+    if (!w) { console.warn('발표자 창을 열지 못했습니다 (팝업 차단?)'); return; }
+    win = w;
+    try {
+      w.document.open(); w.document.write(shell()); w.document.close();
+      w.document.addEventListener('keydown', onKey);
+      w.addEventListener('resize', update);
+    } catch (e) { win = null; return; }
+    if (!t0) t0 = Date.now();
+    if (tick) clearInterval(tick);
+    tick = setInterval(clock, 1000);
+    var h = /^#stop-(\d+)$/.exec(location.hash || '');
+    if (h) cur = Math.min(Math.max(+h[1] - 1, 0), stops.length - 1);
+    update();
+    try { w.focus(); } catch (e) {}
+  }
+  function clock() {
+    if (!win || win.closed) { if (tick) clearInterval(tick); tick = null; win = null; return; }
+    try { win.document.getElementById('pvClock').textContent = fmt((Date.now() - t0) / 1000); } catch (e) {}
+  }
+  function update() {
+    if (!win) return;
+    try {
+      if (win.closed) { win = null; return; }
+      var d = win.document;
+      d.documentElement.className = document.documentElement.className;
+      d.getElementById('pvNum').textContent = (cur + 1) + ' / ' + stops.length;
+      d.getElementById('pvDoc').textContent = document.title;
+      d.getElementById('pvTitle').textContent = title(cur);
+      var box = d.getElementById('pvBox'); box.innerHTML = '';
+      var page = d.createElement('div'); page.className = 'pvpage';
+      var c = stops[cur].cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('.speaker-notes, script'), function (n) { n.remove(); });
+      page.appendChild(c); box.appendChild(page);
+      page.style.transform = 'scale(' + (box.clientWidth / 1280) + ')';
+      var pn = d.getElementById('pvNotes'); pn.innerHTML = '';
+      var ns = notes(cur);
+      if (!ns.length) { var e0 = d.createElement('p'); e0.className = 'ref'; e0.textContent = '이 구간에는 노트가 없습니다.'; pn.appendChild(e0); }
+      ns.forEach(function (t) { var p = d.createElement('p'); p.textContent = t; if (/^참고/.test(t)) p.className = 'ref'; pn.appendChild(p); });
+      pn.scrollTop = 0;
+      d.getElementById('pvNext').innerHTML = cur + 1 < stops.length ? '다음: <b>' + esc(title(cur + 1)) + '</b>' : '마지막 구간입니다.';
+      clock();
+    } catch (e) { win = null; }
+  }
+})();
+</script>
+</body>
+</html>

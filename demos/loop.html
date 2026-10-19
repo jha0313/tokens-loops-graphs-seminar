@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ko" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loop 데모 결과</title>
+  <meta name="description" content="썸네일 생성 e2e 시간 25% 줄이기: single 한 번과 /loop-spec loop를 replay와 실제 API로 비교한 결과">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function () { var t = null; try { t = localStorage.getItem('viz-theme'); } catch (e) {}
+  if (t !== 'dark' && t !== 'light') { try { t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { t = 'light'; } }
+  document.documentElement.className = 'theme-' + t; })();</script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html.theme-light {
+  --bg: #FAFAF9; --surface: #FFFFFF; --surface-hover: #F3F3F1; --border: rgba(0,0,0,0.11);
+  --text: #0f172a; --text-secondary: #556070;
+  --accent: #2563eb; --accent-secondary: #7c3aed;
+  --positive: #047857; --negative: #be123c; --warning: #a16207;
+  --code-bg: #f3f3f1; --hl-bg: #eef4ff; --soft: #f4f6fa;
+  --add-bg: rgba(4,120,87,0.10); --del-bg: rgba(190,18,60,0.09);
+  --before: #94a3b8; --single: #d97706; --graph: #2563eb;
+  --sev-high: #be123c; --sev-medium: #ea580c; --sev-low: #ca8a04; --sev-info: #64748b; --sev-bad: #e2e8f0;
+}
+html.theme-dark {
+  --bg: #0A0A0A; --surface: #141414; --surface-hover: #1E1E1E; --border: rgba(255,255,255,0.13);
+  --text: #EDEDED; --text-secondary: #a3a3a3;
+  --accent: #60a5fa; --accent-secondary: #a78bfa;
+  --positive: #34d399; --negative: #fb7185; --warning: #fbbf24;
+  --code-bg: #101010; --hl-bg: #0f1b2e; --soft: #161a22;
+  --add-bg: rgba(52,211,153,0.12); --del-bg: rgba(251,113,133,0.12);
+  --before: #64748b; --single: #f59e0b; --graph: #60a5fa;
+  --sev-high: #fb7185; --sev-medium: #fb923c; --sev-low: #facc15; --sev-info: #94a3b8; --sev-bad: #334155;
+}
+body { font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text);
+  font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+h1, h2, h3, h4 { color: var(--text); letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; }
+h1 { font-size: 2.25rem; font-weight: 800; }
+h2 { font-size: 1.75rem; font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 700; }
+h4 { font-size: 1.125rem; font-weight: 700; }
+p, li, td, th, dd, dt, summary { font-size: 1rem; }
+.muted { color: var(--text-secondary); }
+code, pre { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1rem; }
+code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre code { background: none; padding: 0; }
+a { color: var(--accent); }
+b, strong { font-weight: 700; }
+.num-i { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+main section { margin-bottom: 64px; }
+
+/* ① one-screen summary */
+.hero { min-height: 100vh; max-height: 720px; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 40px 0 32px; margin-bottom: 24px !important; }
+.kicker { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; color: var(--text-secondary); }
+.kicker b { color: var(--text); }
+.hero h1 { max-width: 960px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.stat .label { color: var(--text-secondary); font-weight: 500; }
+.stat .ba { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 2.25rem; line-height: 1.2; margin: 4px 0 2px; white-space: nowrap; }
+.stat .ba .from { color: var(--text-secondary); font-weight: 600; font-size: 1.5rem; }
+.stat .ba .arrow { color: var(--text-secondary); font-weight: 500; font-size: 1.5rem; margin: 0 6px; }
+.stat .ba .vs { color: var(--text-secondary); font-weight: 500; font-size: 1.25rem; margin: 0 6px; }
+.stat .delta { font-weight: 700; }
+.good { color: var(--positive); } .bad { color: var(--negative); } .flat { color: var(--text-secondary); } .warn { color: var(--warning); }
+.do { background: var(--hl-bg); border-left: 4px solid var(--accent); border-radius: 6px; padding: 12px 16px; font-size: 1.0625rem; }
+.do b { color: var(--accent); }
+.tag { display: inline-block; font-size: 1rem; font-weight: 600; padding: 0 8px; border-radius: 999px; border: 1.5px solid currentColor; line-height: 1.5; white-space: nowrap; }
+.tag.rec { color: var(--accent); } .tag.exp { color: var(--positive); } .tag.est { color: var(--warning); }
+
+/* section head */
+.sec-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.sec-num { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); font-size: 1.25rem; }
+.lead { font-size: 1.1875rem; font-weight: 600; margin-bottom: 20px; max-width: 920px; }
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 22px; margin-top: 18px; }
+.terms p { color: var(--text-secondary); border-left: 3px solid var(--border); padding-left: 12px; }
+.terms p b { color: var(--text); }
+.note { color: var(--text-secondary); margin-top: 12px; }
+
+/* flow diagram (HTML boxes + arrows; wraps to a column on phones) */
+.flow { display: flex; align-items: stretch; }
+.flow > .node { flex: 1 1 0; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.flow > .node.wide { flex-grow: 2.4; }
+.flow > .node.hot { border: 2px solid var(--accent); background: var(--hl-bg); }
+.flow > .node.end { border-style: dashed; }
+.flow > .arr { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.flow > .arr svg { width: 22px; height: 22px; }
+.node .k { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); }
+.node b { display: block; font-size: 1.0625rem; line-height: 1.4; }
+.node .s { color: var(--text-secondary); line-height: 1.5; margin-top: 4px; }
+.node .s code { font-size: 1rem; }
+.node ol, .node ul { margin: 4px 0 0 1.2em; color: var(--text-secondary); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 0 10px; white-space: nowrap; }
+.lanes { display: grid; gap: 12px; }
+.lane { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; }
+.lane .who { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; font-size: 1.125rem; }
+.lane .who span { display: block; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; font-size: 1rem; color: var(--text-secondary); }
+.who.c-single { color: var(--single); } .who.c-graph { color: var(--graph); } .who.c-loop { color: var(--accent-secondary); } .who.c-base { color: var(--text-secondary); }
+.goal { background: var(--soft); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; }
+.goal b { color: var(--accent); }
+.split { display: grid; gap: 6px; margin-top: 6px; }
+.split > div { border-radius: 8px; padding: 6px 10px; border: 1px solid var(--border); }
+.split .ok { background: var(--add-bg); } .split .no { background: var(--del-bg); }
+.split b { display: inline; font-size: 1rem; }
+
+/* ③ results: table + chart side by side */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+thead th { font-weight: 600; color: var(--text-secondary); }
+tbody th { font-weight: 600; }
+td.r, th.r, td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.t td.r b { font-size: 1.0625rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.chart .ttl { font-weight: 700; margin-bottom: 8px; }
+.brow { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; align-items: center; margin: 7px 0; }
+.brow .bl { color: var(--text-secondary); white-space: nowrap; }
+.brow .bv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.track { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--accent); }
+.fill.base { background: var(--before); } .fill.single { background: var(--single); } .fill.loop { background: var(--accent-secondary); } .fill.graph { background: var(--graph); }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.high { background: var(--sev-high); } .seg.medium { background: var(--sev-medium); } .seg.low { background: var(--sev-low); } .seg.info { background: var(--sev-info); }
+.seg.bad { background: repeating-linear-gradient(45deg, var(--sev-bad), var(--sev-bad) 4px, transparent 4px, transparent 8px); outline: 1px solid var(--border); outline-offset: -1px; }
+.track .seg:first-child { border-radius: 6px 0 0 6px; }
+.whisker { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--text); }
+.whisker::before, .whisker::after { content: ''; position: absolute; top: -6px; width: 2px; height: 14px; background: var(--text); }
+.whisker::before { left: 0; } .whisker::after { right: 0; }
+.target { position: absolute; top: -5px; bottom: -5px; border-left: 2px dashed var(--negative); }
+.grp { font-weight: 700; margin-top: 12px; }
+.grp:first-of-type { margin-top: 0; }
+.axis { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; color: var(--text-secondary); margin-top: 4px; }
+.axis .ticks { position: relative; height: 1.6em; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.axis .ticks span:first-child { transform: none; }
+.axis .ticks span:last-child { transform: translateX(-100%); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-secondary); margin-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.legend i.ring { border-radius: 50%; border: 3px solid var(--negative); }
+.legend i.dash { width: 0; height: 16px; border-left: 2px dashed var(--negative); border-radius: 0; }
+.strip .track { height: 30px; }
+.dot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); }
+.dot.before { background: var(--before); }
+.dot.fail { background: var(--bg); border: 3px solid var(--negative); }
+
+/* ④ why */
+.why-line { font-size: 1.125rem; font-weight: 600; margin-top: 14px; }
+.cov { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 22px; }
+.cov figure { margin: 0; }
+.cov svg { display: block; width: 100%; height: auto; max-width: 170px; margin: 0 auto; }
+.cov figcaption { text-align: center; margin-top: 8px; line-height: 1.45; }
+.cov figcaption b { display: block; font-size: 1.125rem; }
+.cv-on { fill: var(--accent); } .cv-on.s { fill: var(--single); }
+.cv-off { fill: none; stroke: var(--text-secondary); stroke-width: 0.8; stroke-dasharray: 1.6 1.2; opacity: 0.7; }
+.cause { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.cause > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.cause b { display: block; }
+
+/* ⑤ so */
+ol.so { list-style: none; counter-reset: so; display: grid; gap: 10px; }
+ol.so li { counter-increment: so; position: relative; padding: 14px 18px 14px 62px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 1.125rem; }
+ol.so li::before { content: counter(so); position: absolute; left: 18px; top: 13px; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+ol.so li span { display: block; color: var(--text-secondary); font-size: 1rem; margin-top: 2px; }
+.bridge { color: var(--text-secondary); margin-top: 16px; font-style: normal; }
+
+/* ⑥ collapsed records */
+details { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+details > summary { cursor: pointer; font-weight: 600; padding: 12px 16px; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '+'; font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); width: 1em; flex: none; }
+details[open] > summary::before { content: '−'; }
+details > .body, details > .dbody { padding: 4px 16px 18px; display: block; }
+.body > * + *, .dbody > * + * { margin-top: 14px; }
+.body h3 { margin-top: 22px; } .body h4 { margin-top: 18px; }
+details details { background: var(--bg); }
+pre, pre.block, pre.code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; line-height: 1.55; overflow-x: auto; }
+pre.block .add { background: var(--add-bg); display: block; } pre.block .del { background: var(--del-bg); display: block; }
+.copy { float: right; font-size: 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 0 10px; cursor: pointer; font-family: inherit; margin-left: 8px; }
+.look { background: var(--soft); border-radius: 10px; padding: 14px 18px; }
+.look h3 { font-size: 1.0625rem; color: var(--accent); margin: 0 0 6px; letter-spacing: 0; }
+.look ol { padding-left: 1.3em; }
+ul.plain, .body ul, .dbody ul { padding-left: 1.2em; display: grid; gap: 6px; }
+.body ol, .dbody ol { padding-left: 1.3em; }
+dl.rc { display: grid; grid-template-columns: 180px 1fr; }
+dl.rc dt, dl.rc dd { padding: 8px 4px; border-bottom: 1px solid var(--border); }
+dl.rc dt { color: var(--text-secondary); }
+.rc dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+.rc dt { color: var(--text-secondary); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+tr.keep td { background: var(--add-bg); }
+.badge { display: inline-block; font-weight: 700; font-size: 1rem; padding: 0 8px; border-radius: 4px; white-space: nowrap; }
+.badge.keep, .badge.done { color: var(--positive); background: var(--add-bg); }
+.badge.reject, .badge.blocked { color: var(--negative); background: var(--del-bg); }
+.badge.cont { color: var(--warning); background: var(--soft); }
+.pass { color: var(--positive); font-weight: 700; } .fail { color: var(--negative); font-weight: 700; }
+.q-yes { color: var(--positive); font-weight: 700; } .q-no { color: var(--negative); font-weight: 700; }
+.decide { background: var(--soft); }
+.shot { width: 100%; border: 1px solid var(--border); border-radius: 8px; display: block; }
+.tl .row { display: grid; grid-template-columns: 9em 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.tl .lab { color: var(--text-secondary); }
+.tl .bar { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.tl .seg { border-radius: 6px; display: flex; align-items: center; padding: 0 8px; color: #fff; white-space: nowrap; overflow: hidden; }
+.tl .axis { display: grid; grid-template-columns: 9em 1fr; gap: 10px; }
+.foot { color: var(--text-secondary); margin-top: 18px; }
+
+/* menu */
+.viz-menu { position: fixed; top: 12px; right: 12px; z-index: 40; }
+.viz-menu-toggle { width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.viz-menu-dropdown { position: absolute; top: 52px; right: 0; min-width: 190px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: none; }
+.viz-menu-dropdown.open { display: block; }
+.viz-menu-dropdown button { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; background: transparent; color: var(--text); font-size: 1rem; font-family: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; }
+.viz-menu-dropdown button:hover { background: var(--surface-hover); }
+.skip-to-content { position: absolute; top: -60px; left: 6px; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 4px; z-index: 60; }
+.skip-to-content:focus { top: 6px; }
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .viz-menu { display: none; }
+  .hero { min-height: auto; }
+  .card, .flow > .node, ol.so li { break-inside: avoid; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@media (max-width: 960px) {
+  .duo { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .stat { padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px; }
+  .stat .ba { font-size: 1.75rem; margin: 0; }
+  .stat .ba .from, .stat .ba .arrow, .stat .ba .vs { font-size: 1.125rem; }
+  .stat .delta { grid-column: 1 / -1; }
+  .flow { flex-direction: column; }
+  .flow > .arr { width: auto; height: 26px; }
+  .flow > .arr svg { transform: rotate(90deg); }
+  .lane { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .lane .who span { display: inline; margin-left: 6px; }
+  .cov { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cause, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td { display: block; width: 100%; }
+  table.stack thead { display: none; }
+  table.stack tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
+  table.stack th, table.stack td { border: 0; padding: 2px 0; text-align: left; white-space: normal; }
+  table.stack td[data-label]::before { content: attr(data-label) " · "; color: var(--text-secondary); }
+  table.stack td[data-k]::before { content: attr(data-k) " "; font-weight: 700; color: var(--text-secondary); }
+}
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px 64px; }
+  .hero { max-height: none; gap: 12px; padding: 60px 0 16px; justify-content: flex-start; }
+  .hero h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.4rem; }
+  .lead { font-size: 1.0625rem; }
+  .do { padding: 8px 12px; font-size: 1rem; }
+  .stat .ba { font-size: 1.5rem; }
+  .brow, .axis { grid-template-columns: 5.2em minmax(0, 1fr) 4.6em; gap: 6px; }
+  .card { padding: 12px; }
+  ol.so li { padding: 12px 14px 12px 54px; font-size: 1.0625rem; }
+  ol.so li::before { left: 14px; }
+  dl.rc { grid-template-columns: 1fr; }
+  .rc dl { grid-template-columns: 1fr; }
+  .tl .row, .tl .axis { grid-template-columns: 6em 1fr; }
+}
+@media (max-width: 375px) { body { overflow-x: hidden; } }
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-to-content">본문으로 건너뛰기</a>
+<div class="viz-menu">
+  <button class="viz-menu-toggle" type="button" onclick="toggleMenu()" aria-label="메뉴"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg></button>
+  <div class="viz-menu-dropdown" id="vizMenuDropdown">
+    <button type="button" onclick="cycleTheme()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="themeLabel">다크 모드</span></button>
+    <button type="button" onclick="downloadImage()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg><span>PNG로 저장</span></button>
+    <button type="button" onclick="window.print()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/></svg><span>인쇄 / PDF</span></button>
+  </div>
+</div>
+<button class="present-btn" type="button">발표 모드 (P)</button>
+<main id="main-content" class="wrap">
+<section id="summary" data-stop="요약" class="hero" aria-label="요약">
+
+<div class="kicker"><b>데모 2 · Loop</b><span class="tag exp">실험</span><span>autokliq 썸네일 생성의 e2e 시간을 출력은 그대로 둔 채 25% 줄이기 · single vs loop, 방식마다 2 run · claude-opus-5-5 · effort xhigh</span></div>
+<h1>이번 과제는 single 한 번으로 충분했습니다. loop가 준 것은 속도가 아니라 정직한 멈춤이었습니다.</h1>
+<div class="stats">
+  <div class="stat"><div class="label">시험장(replay) e2e · single</div><div class="ba"><span class="from">244</span><span class="arrow">→</span>180 s</div><div class="delta good">−26% · 목표 넘음</div></div>
+  <div class="stat"><div class="label">시험장(replay) e2e · loop</div><div class="ba"><span class="from">244</span><span class="arrow">→</span>226 s</div><div class="delta warn">−7% · 스스로 멈춤</div></div>
+  <div class="stat"><div class="label">실제 API e2e (기준 289 s)</div><div class="ba">287<span class="vs">vs</span>265 s</div><div class="delta flat">single vs loop · 흔들림이 커서 못 가름</div></div>
+</div>
+<p class="do"><b>해 볼 것:</b> 업무 하나를 골라 <code>/loop-spec</code>으로 끝 조건과 멈춤 조건을 먼저 쓰고 돌려 보세요. 그 전에 측정이 현실을 담는지부터 확인하세요.</p>
+
+<aside class="speaker-notes" hidden><p>두 번째 데모는 loop입니다. 썸네일을 처음부터 끝까지 만드는 시간을, 결과물은 그대로 둔 채 25% 줄이는 과제입니다. 같은 목표를 single, 즉 prompt 한 번으로도 시키고, /loop-spec으로 설계한 loop로도 시켰습니다. 각각 두 번씩입니다.</p><p>시험장에서는 single이 이겼습니다. 26% 줄여 목표를 넘었고, loop는 7%에서 스스로 멈췄습니다. 그런데 실제 API로 다시 재 보니 둘을 가를 수 없었습니다. single이 더 얻은 몫은 시험장에서만 맞는 추측이었습니다. loop가 준 건 속도가 아니라, 안 되는 걸 안 된다고 말하고 멈춘 것이었습니다.</p><p>참고 — replay = 녹화한 답과 실제 호출 지연을 재생하는 측정(비용 0, 흔들림 약 1 s). 실제 API는 tree당 2–3번, OpenAI 크레딧 소진으로 중단. 거짓 &quot;끝&quot; 0건, 사람 개입 0번.</p></aside>
+</section>
+<section id="how" data-stop="어떻게 했나" aria-label="어떻게 했나">
+<div class="sec-head"><span class="sec-num">02</span><h2>어떻게 했나</h2></div><p class="lead">같은 목표를 두 방식으로 시키고, 같은 측정기로 쟀습니다.</p><div class="goal"><b>같은 목표</b> · e2e 중앙값 25% 이상 줄이기 · 출력 지문(sha)과 모델 호출 목록은 그대로 · prompt·모델·gate 변경 금지 · 같은 commit</div><div class="lanes"><div class="lane"><div class="who c-single">single<span>prompt 한 번</span></div><div class="flow" role="group" aria-label="single 진행"><div class="node "><b>과제 문장 한 번</b><div class="s">무엇을 바꿀지, 언제 끝낼지 에이전트가 정함</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><b>스스로 고치고 잼</b><div class="s">여러 변경을 한꺼번에</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><b>끝 보고</b><div class="s">"목표 넘음" + 단서</div></div></div></div><div class="lane"><div class="who c-loop">loop<span>/loop-spec 설계</span></div><div class="flow" role="group" aria-label="loop 진행"><div class="node "><b>설계 4파일</b><div class="s">규칙서 LOOP.md · 판정기 check.sh · 측정기 · 시작 한 줄 /goal</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node hot"><b>변경 1개 → 3번 잼</b><div class="s">흔들림보다 확실히 빨라야 남김, 아니면 되돌림 ↺</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><b>check.sh 마지막 줄</b><div class="s"><span class="badge done">DONE</span> <span class="badge cont">CONTINUE</span> <span class="badge blocked">BLOCKED</span></div></div></div></div></div><div class="terms"><p><b>replay (시험장)</b>: 녹화해 둔 API 답과 실제 지연을 재생하는 측정. 같은 질문엔 늘 같은 답, 비용 0.</p><p><b>실제 API</b>: 진짜 모델과 이미지 API를 부르는 측정. 다시 물으면 답이 달라지고, 유료입니다.</p><p><b>BLOCKED</b>: 나아지지 않는 시도가 3번 이어져 check.sh가 "멈춤"을 찍은 상태.</p></div>
+<aside class="speaker-notes" hidden><p>두 방식은 같은 목표, 같은 모델, 같은 commit, 같은 측정기를 씁니다. 다른 것은 하나입니다. single은 prompt 한 번으로 알아서 합니다. loop는 먼저 /loop-spec이 규칙서와 판정기를 만들고, 그다음 변경 하나를 넣고 세 번 재서, 흔들림보다 확실히 빨라졌을 때만 남기기를 반복합니다.</p><p>끝을 정하는 건 모델의 말이 아니라 check.sh의 마지막 줄입니다. DONE, CONTINUE, BLOCKED 셋 중 하나만 찍습니다. 측정은 두 단계로 했습니다. 녹화한 답을 재생하는 replay, 즉 시험장에서 빠르게 재고, 마지막에 실제 API로 확인했습니다.</p><p>참고 — 설계: /loop-spec 25분 $3.71, 사람이 고친 글자 0. 채택 규칙: 새 중앙값이 최고 기록보다 max(2×spread, 2 s) 넘게 빨라야 keep. 예산 15 iterations · 3시간 · reject 3번 연속이면 BLOCKED.</p></aside>
+</section>
+<section id="result" data-stop="결과" aria-label="결과">
+<div class="sec-head"><span class="sec-num">03</span><h2>결과</h2></div><p class="lead">시험장에서는 single이 목표를 넘었지만, 실제 API에서는 차이가 보이지 않았습니다.</p><div class="duo"><div><table class="t"><thead><tr><th>항목</th><th class="r">기준</th><th class="r">single</th><th class="r">loop</th></tr></thead><tbody><tr><th scope="row">replay e2e 중앙값</th><td class="r">244 s</td><td class="r"><b>180 s</b></td><td class="r">226 s</td></tr><tr><th scope="row">실제 API e2e 중앙값</th><td class="r">289 s</td><td class="r">287 s</td><td class="r"><b>265 s</b></td></tr><tr><th scope="row">실제 API, 이미지와 무관한 시점 (마지막 L5 시작)</th><td class="r">158 s</td><td class="r">134 s</td><td class="r"><b>126 s</b></td></tr><tr><th scope="row">거짓 "끝" · 사람 개입</th><td class="r">–</td><td class="r">0 · 0</td><td class="r">0 · 0</td></tr><tr><th scope="row">Claude 비용 (run 1번, 정가)</th><td class="r">–</td><td class="r">$10.63</td><td class="r"><b>$8.11</b></td></tr></tbody></table><p class="note">loop 비용에는 설계 $3.71(한 번, 두 run이 같이 씀)이 빠져 있습니다.</p></div><div class="card chart" role="img" aria-label="e2e 시간 막대 그래프. replay: 기준 244초, single 180초(목표 183초 넘음), loop 226초. 실제 API: 기준 289초, single 287초(236–338), loop 265초(263–275)"><div class="ttl">e2e 시간, 중앙값 (짧을수록 좋음)</div><div class="grp">시험장 (replay)</div><div class="brow"><span class="bl">기준</span><div class="track"><div class="fill base" style="width:69.71%"></div><div class="target" style="left:52.29%"></div></div><span class="bv">244 s</span></div><div class="brow"><span class="bl">single</span><div class="track"><div class="fill single" style="width:51.43%"></div><div class="target" style="left:52.29%"></div></div><span class="bv">180 s</span></div><div class="brow"><span class="bl">loop</span><div class="track"><div class="fill loop" style="width:64.57%"></div><div class="target" style="left:52.29%"></div></div><span class="bv">226 s</span></div><div class="grp">실제 API</div><div class="brow"><span class="bl">기준</span><div class="track"><div class="fill base" style="width:82.57%"></div><div class="whisker" style="left:74.00%;width:20.57%"></div></div><span class="bv">289 s</span></div><div class="brow"><span class="bl">single</span><div class="track"><div class="fill single" style="width:82.00%"></div><div class="whisker" style="left:67.43%;width:29.14%"></div></div><span class="bv">287 s</span></div><div class="brow"><span class="bl">loop</span><div class="track"><div class="fill loop" style="width:75.71%"></div><div class="whisker" style="left:75.14%;width:3.43%"></div></div><span class="bv">265 s</span></div><div class="axis" aria-hidden="true"><span></span><div class="ticks"><span style="left:0.00%">0</span><span style="left:28.57%">100</span><span style="left:57.14%">200</span><span style="left:85.71%">300 s</span></div><span></span></div><div class="legend"><span><i class="dash"></i>목표 183 s (−25%)</span><span><i style="background:var(--text);height:2px;vertical-align:4px"></i>run마다 흔들린 범위</span></div></div></div>
+<aside class="speaker-notes" hidden><p>오른쪽 위 막대가 시험장, replay입니다. 기준 244초에서 single은 180초로 빨간 목표선을 넘었고, loop는 226초에서 멈췄습니다. 아래 막대가 실제 API입니다. single 287초, loop 265초인데, 가는 선이 run마다 흔들린 범위입니다. 범위가 겹쳐서 둘을 가를 수 없습니다.</p><p>이미지 생성과 상관없는 시점만 따로 봐도 loop 126초, single 134초로 비슷했습니다. 그리고 네 run 모두 &#x27;끝났다&#x27;를 거짓으로 말한 적이 없습니다. single도 &#x27;시험장에서 과장될 수 있다&#x27;고 스스로 적었습니다. 비용은 loop가 run당 2.5달러쯤 쌌습니다.</p><p>참고 — 실제 API는 기준 3 · loop-1 3 · single-1 2번만 유효(크레딧 소진). 전체 비용 OpenAI $14.60 + Claude $43.15 = $57.75, 상한 $100 안. loop-1의 judge 점수 58.6(기준 66.8)은 확인하지 못함.</p></aside>
+</section>
+<section id="why" data-stop="왜 그렇게 나왔나" aria-label="왜 그렇게 나왔나">
+<div class="sec-head"><span class="sec-num">04</span><h2>왜 그렇게 나왔나</h2></div><p class="lead">차이는 single이 더한 "추측 실행"에서 나왔습니다. 시험장은 그 추측이 늘 맞는 곳이었습니다.</p><div class="lanes"><div class="lane"><div class="who c-single">single</div><div class="flow" role="group" aria-label="single이 한 일"><div class="node "><b>공통 개선</b><div class="s">headline을 앞 단계와 함께 시작 · −18 s</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node hot"><b>+ 추측 실행</b><div class="s">나중에 다시 물을 질문을 미리 던지고, 판정도 미리</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node wide"><div class="split"><div class="ok"><b>시험장:</b> 같은 질문에 같은 답 → 추측 적중, −41 s 더</div><div class="no"><b>실제 API:</b> 다시 물으면 다른 답 → 추측 빗나감, 이득 사라짐</div></div></div></div></div><div class="lane"><div class="who c-loop">loop</div><div class="flow" role="group" aria-label="loop가 한 일"><div class="node "><b>공통 개선</b><div class="s">같은 아이디어를 iteration 1에서 찾음</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node hot"><b>규칙서의 한 줄</b><div class="s">"나중에 버릴 수 있는 추측 호출은 하지 않는다"</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node wide end"><b>작은 변경 3번 reject → BLOCKED</b><div class="s">싸게 멈추고 "사람이 정할 일"을 남김</div></div></div></div></div><p class="why-line">테스트와 출력 검사는 네 run 모두 통과했습니다. 이 차이는 검사로는 보이지 않았습니다.</p>
+<aside class="speaker-notes" hidden><p>두 방식 모두 같은 개선 하나를 찾았습니다. headline 만들기를 앞 단계와 함께 시작해서 18초를 줄였습니다. single은 여기에 추측 실행을 더했습니다. 나중에 다시 물을 질문을 미리 던지고, 판정도 미리 돌렸습니다. 시험장은 같은 질문에 늘 같은 답을 주니까 이 추측이 매번 맞았고, 41초를 더 줄였습니다.</p><p>실제 API는 다시 물으면 다른 답을 줍니다. 추측이 빗나가서 이득이 사라졌습니다. loop는 설계 단계에서 &#x27;나중에 버릴 수 있는 추측 호출은 하지 않는다&#x27;는 규칙을 스스로 적었습니다. 그래서 그 길로 가지 않았고, 작은 변경이 세 번 막히자 멈췄습니다. 테스트와 출력 검사는 네 run 모두 통과했으니, 이 차이는 검사로는 보이지 않았습니다.</p><p>참고 — loop-1: iteration 1 keep(−17.95 s), 2·3·4 reject(기준 2 s 미달) → LOOP-BLOCKED, 39분. 설계는 시작 전에 &quot;규칙 안 상한 약 −11%&quot;라고 적었고 graph-plan도 약 −11.6%로 추정. state.md &quot;For a human&quot;: concept 3~6의 직렬 재질문을 병렬로 할지는 제품 결정.</p></aside>
+</section>
+<section id="so" data-stop="그래서" aria-label="그래서">
+<div class="sec-head"><span class="sec-num">05</span><h2>그래서</h2></div><ol class="so"><li>큰 아이디어 하나로 끝나는 일은 single로 충분합니다.<span>작은 개선을 여러 번 쌓을 일이 아니었습니다. 남은 작은 변경은 모두 흔들림 기준(2 s)에 못 미쳤습니다.</span></li><li>loop는 끝을 기계가 판정할 수 있고, 사람 없이 오래 맡길 때 겁니다.<span>이번에 준 것은 속도가 아니라 정직한 멈춤과 "사람이 정할 일" 목록입니다.</span></li><li>측정이 현실을 담는지부터 의심하세요.<span>측정기가 현실과 다른 곳에서, 거기서만 맞는 최적화가 자랍니다.</span></li></ol><p class="bridge">다음 데모: loop 하나는 에이전트 하나, context 하나입니다. 일이 그보다 크면 어떻게 할까요?</p>
+<aside class="speaker-notes" hidden><p>정리하면 이렇습니다. 이번처럼 큰 아이디어 하나로 끝나는 일은 single로 충분합니다. loop는 끝을 기계가 판정할 수 있고, 사람 없이 오래 맡겨야 할 때 겁니다. 이번에 loop가 준 건 속도가 아니라, 규칙 안에서는 더 안 된다고 싸게 멈추고 사람이 정할 일을 남긴 것이었습니다.</p><p>그리고 측정이 현실을 담는지부터 확인하세요. 측정기가 현실과 다른 곳에서 최적화가 자랍니다. loop 하나는 에이전트 하나, context 하나입니다. 일이 그보다 크면 어떻게 할까요? 다음은 graph입니다.</p><p>참고 — 같은 과제 문장을 /graph-plan에 주면 판정은 &quot;loop&quot;(Q3: 측정을 하나씩 돌려야 해서 한 context에 들어감, N=1, $1.96).</p></aside>
+</section>
+<section id="records" data-stop="자세한 기록" aria-label="자세한 기록">
+<div class="sec-head"><span class="sec-num">06</span><h2>자세한 기록</h2></div><p class="lead">프롬프트, 산출물 전문, iteration 기록, 실제 API 측정, 한계는 접어 두었습니다.</p><details><summary>스킬 프롬프트 원문 (loop · single · graph-plan)</summary><div class="body"><p>참석자가 치는 그대로의 한 줄입니다. 무인 실행(<code>claude -p</code>)이라 끝에 두 문장을 붙였습니다: <code>Non-interactive run: nobody can answer questions. Where you would ask, state your assumption and continue.</code> 그리고 <code>Design the loop and stop; do not start it.</code></p><pre class="block"><button class="copy" type="button" onclick="copyText(this)">복사</button><code>/loop-spec autokliq 썸네일 생성의 end-to-end 시간을 출력은 그대로 둔 채 줄여 주세요. 범위는 전체 생성 한 번(concept 6개)의 `run.queued` → `run.completed`이고, 단계는 services/perf-report/pipeline-stages.ts의 PIPELINE_STAGES입니다. 측정은 `N=3 bash scripts/e2e-gen/measure.sh &lt;label&gt;`로 합니다(replay 모드: fixture 답과 실제 run에서 기록한 호출별 API 지연을 씁니다. 네트워크와 비용은 0입니다. 설명은 scripts/e2e-gen/README.md). 목표: e2e 중앙값을 지금 커밋보다 25% 이상 줄이기. 규칙: measure.sh가 출력하는 output_sha256이 지금 커밋의 값과 같아야 합니다. `npx tsc -p tsconfig.pipeline.json --noEmit`와 기존 테스트(`npx vitest run services/thumbnail-generator pipeline-server`)가 계속 통과해야 합니다. scripts/e2e-gen/와 __tests__/offline/는 고치지 마세요. prompt, 모델, gate, judge, 임계값, feature flag를 바꾸지 마세요. 패키지를 추가·삭제·업그레이드하거나 package.json, package-lock.json을 고치지 마세요. env 파일이나 API key를 읽지 말고 네트워크를 호출하지 마세요. commit, push, merge 하지 마세요. 끝에 잰 개선 폭과 잰 방법을 말해 주세요. 예산: 최대 15 iterations, 3시간. 진척 없는 iteration이 3번 이어지면 멈춤.</code></pre>
+          <div class="body">
+            <p>single은 같은 과제 문장에 무인 실행 문장만 붙였습니다. <code>/loop-spec</code>, 예산 문장, check.sh, <code>/goal</code>은 없습니다.</p>
+            <pre><code>autokliq 썸네일 생성의 end-to-end 시간을 출력은 그대로 둔 채 줄여 주세요. 범위는 전체 생성 한 번(concept 6개)의 `run.queued` → `run.completed`이고, 단계는 services/perf-report/pipeline-stages.ts의 PIPELINE_STAGES입니다. 측정은 `N=3 bash scripts/e2e-gen/measure.sh &lt;label&gt;`로 합니다(replay 모드: fixture 답과 실제 run에서 기록한 호출별 API 지연을 씁니다. 네트워크와 비용은 0입니다. 설명은 scripts/e2e-gen/README.md). 목표: e2e 중앙값을 지금 커밋보다 25% 이상 줄이기. 규칙: measure.sh가 출력하는 output_sha256이 지금 커밋의 값과 같아야 합니다. `npx tsc -p tsconfig.pipeline.json --noEmit`와 기존 테스트(`npx vitest run services/thumbnail-generator pipeline-server`)가 계속 통과해야 합니다. scripts/e2e-gen/와 __tests__/offline/는 고치지 마세요. prompt, 모델, gate, judge, 임계값, feature flag를 바꾸지 마세요. 패키지를 추가·삭제·업그레이드하거나 package.json, package-lock.json을 고치지 마세요. env 파일이나 API key를 읽지 말고 네트워크를 호출하지 마세요. commit, push, merge 하지 마세요. 끝에 잰 개선 폭과 잰 방법을 말해 주세요. Non-interactive run: nobody can answer questions. Where you would ask, state your assumption and continue.</code></pre>
+            <p>graph-plan은 같은 과제에 "계획만"을 붙여 한 번 돌렸습니다(6절).</p>
+            <pre><code>/graph-plan autokliq 썸네일 생성의 end-to-end 시간을 출력은 그대로 둔 채 줄여 주세요. 범위는 전체 생성 한 번(concept 6개)의 `run.queued` → `run.completed`이고, 단계는 services/perf-report/pipeline-stages.ts의 PIPELINE_STAGES입니다. 측정은 `N=3 bash scripts/e2e-gen/measure.sh &lt;label&gt;`로 합니다(replay 모드: fixture 답과 실제 run에서 기록한 호출별 API 지연을 씁니다. 네트워크와 비용은 0입니다. 설명은 scripts/e2e-gen/README.md). 목표: e2e 중앙값을 지금 커밋보다 25% 이상 줄이기. 규칙: measure.sh가 출력하는 output_sha256이 지금 커밋의 값과 같아야 합니다. `npx tsc -p tsconfig.pipeline.json --noEmit`와 기존 테스트(`npx vitest run services/thumbnail-generator pipeline-server`)가 계속 통과해야 합니다. scripts/e2e-gen/와 __tests__/offline/는 고치지 마세요. prompt, 모델, gate, judge, 임계값, feature flag를 바꾸지 마세요. 패키지를 추가·삭제·업그레이드하거나 package.json, package-lock.json을 고치지 마세요. env 파일이나 API key를 읽지 말고 네트워크를 호출하지 마세요. commit, push, merge 하지 마세요. 끝에 잰 개선 폭과 잰 방법을 말해 주세요. Non-interactive run: nobody can answer questions. Where you would ask, state your assumption and continue. Planning only: give the verdict and the plan, do not execute the graph.</code></pre>
+          </div>
+        </div></details><details><summary>/loop-spec이 만든 산출물 전문</summary><div class="body"><p>/loop-spec이 25분, $3.71에 만든 파일입니다. 사람은 한 글자도 고치지 않았습니다. 공개용으로 작업 폴더 절대 경로만 <code>&lt;workspace&gt;</code>로 바꿨습니다.</p><details><summary>LOOP.md: 규칙서 (103줄)</summary><div class="body"><pre><code># LOOP: e2e-speed
+
+Goal: cut the median end-to-end time (`run.queued` → `run.completed`) of one full 6-concept thumbnail generation,
+measured with `N=3 bash scripts/e2e-gen/measure.sh` in replay mode, by at least 25 % vs commit `48ecd89a`
+(243.99 s → ≤ 182.993 s), with the same `output_sha256` (`28f5a3e7f838…`) and the same model calls.
+Type: hill-climb
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Trigger | `/goal` now, one session (the line in "Start"). Not `/loop`: the goal has an end state. |
+| 2 | Work source | `state.md` "Next ideas", top first. After each iteration, re-rank them from the stage table that `measure.sh` prints and from the `calls` timeline in `scripts/e2e-gen/out/loop-candidate-&lt;tree&gt;-1.json` (startMs/endMs in wall ms; real s = ms ÷ 100). |
+| 3 | Context and tools | `services/thumbnail-generator/CLAUDE.md` (pipeline area doc), `docs/headlines.md` there, `layers/layer-5-6-orchestrator.ts`, `utils/resolve-headline.ts`, `utils/headline-sibling-gate.ts`, `pipeline-server/full-generation-handler.ts`, `scripts/e2e-gen/README.md`. Read, Edit, Bash in the foreground. An Explore subagent only for read-only search, finished before the turn ends. Model: this session's model, default effort. |
+| 4 | Workspace and permission boundary | Workspace `&lt;workspace&gt;` (an isolated clone: no git remote, HEAD pinned at `48ecd89a`). Allowed: edit source files outside "Protected"; run `bash .loop/e2e-speed/*.sh`, `E2E_MODE=fixture N=1 bash scripts/e2e-gen/measure.sh smoke`, `npx tsc -p tsconfig.pipeline.json --noEmit`, `npx vitest run &lt;paths&gt;`, `git status/diff/log/show`, read-only shell tools. Forbidden: see "Never". |
+| 5 | Verifier | `.loop/e2e-speed/check.sh` (+ `measure.sh`, `snapshot.sh`, shared `lib.sh`). Last line: LOOP-DONE / LOOP-CONTINUE / LOOP-BLOCKED. |
+| 6 | State | `.loop/e2e-speed/state.md` (read first, update last), `results.tsv` (one row per measurement, written only by `measure.sh`), `baseline.json`, `accepted.patch` + `accepted.tree` (the kept change), `started_at` (clock, written by the first check.sh run), `logs/`. |
+| 7 | Budget | 15 iterations (= `candidate` rows), 3 hours from `started_at`, 3 rejected iterations in a row → stop (the user's rule: no replan round). check.sh enforces all three. One iteration ≈ 2.5 min of commands (guards 20 s, 3 replay runs 85 s, check 20 s) + reading and editing. |
+| 8 | Escalation | LOOP-BLOCKED (environment error or budget used); the same failure 3 times (3 rejects in a row ends the loop anyway); any action outside the boundary: do not take it, write it in state.md "For a human". |
+| 9 | Stop | DONE only when check.sh prints LOOP-DONE: HEAD = `48ecd89a`, tree = last kept tree = `accepted.tree`, no protected path changed, tsc + vitest pass, best kept median ≤ 182.993 s, and a fresh `confirm` measurement (N=3) of the same tree is also ≤ 182.993 s with every guard below. |
+
+## Iteration (one per turn)
+
+0. First turn only: `bash .loop/e2e-speed/check.sh` before any edit (starts the clock, checks the environment).
+1. Read `LOOP.md`, `state.md`, `tail -5 .loop/e2e-speed/results.tsv`.
+2. Take the top idea in "Next ideas". Read the code. Make ONE change (one idea, smallest diff).
+3. Optional, 5 s: `E2E_MODE=fixture N=1 bash scripts/e2e-gen/measure.sh smoke` must show `"all_completed": true`.
+   Its sha is NOT the guard (fixture mode has no latency, so calls interleave differently: `73243b6d…`).
+4. `bash .loop/e2e-speed/measure.sh candidate "&lt;one line: what changed&gt;"` (foreground, timeout 600000).
+5. `verdict=keep` → `bash .loop/e2e-speed/snapshot.sh save`. `verdict=reject` → `bash .loop/e2e-speed/snapshot.sh restore`.
+   Exit 2 (not measured) → no row; go to step 6 and act on its last line.
+6. `bash .loop/e2e-speed/check.sh`. Put its full stdout in a fenced block.
+7. Update `state.md`: the idea → kept or rejected, the numbers, the reason; next ideas; the last check output.
+
+## Correctness guard
+
+`measure.sh` rejects a change unless all of these hold (the same checks run in the `confirm` before DONE):
+- No protected path changed (list below), no existing test modified or deleted.
+- `NODE_OPTIONS=--max-old-space-size=4096 npx tsc -p tsconfig.pipeline.json --noEmit` and
+  `npx vitest run services/thumbnail-generator pipeline-server` pass.
+- Each of the 3 replay runs: `output_sha256` = `28f5a3e7f838bed43ad284c4dc4b2dbca07672bb06a409e78a10af0d2b7f5e08`;
+  status completed, 6/6 concepts, no blocked network call, no fixture miss; the multiset of model calls
+  (stage key | model | ok) equals `baseline.json` `calls` (none added, dropped, merged, re-tagged or moved to another model);
+  `|wall_s ÷ scale − e2e_s| ≤ 1 s` (the run's timestamps agree with the wall clock).
+
+## Noise
+
+Baseline: median 243.99 s, spread 0.70 s over 3 runs (an earlier design run: 243.60 s, spread 0.52 s; the same sha).
+Accept a change only if its median &lt; best median − max(2 × max(best spread, candidate spread), 2.0 s).
+A measured tree is never measured again as a candidate (no re-rolling for noise).
+
+## Protected (`lib.sh` PROTECTED / TESTS, checked by script)
+
+`scripts/e2e-gen/`, `__tests__/offline/`, `__tests__/setup/`, `package.json`, `package-lock.json`, any `.env*`,
+any `prompts/` dir, `services/evaluation/` and `services/thumbnail-judge/` (judges), `lib/config.ts` (models),
+`lib/flags/`, `cloudbuild.yaml`, the replay boundary (`services/gemini/fixture-replay.ts`, `fixture-stub.ts`,
+`text-providers.ts`, `services/image-provider/fixture-adapter.ts`, `purpose-context.ts`, `lib/fixture-mode.ts`),
+`vitest.config*`, `tsconfig*`, `.claude/`, `.codex/`, `.agents/`, root `CLAUDE.md` / `AGENTS.md`, every existing
+`__tests__/` or `*.test.ts(x)` file. New files (also new tests) are fine.
+
+## Assumptions (non-interactive run; nobody could answer)
+
+1. "Output unchanged" = the replay `output_sha256` above AND the same model calls. Skipping, deduplicating or
+   caching a call is out even when the sha stays: it changes production behaviour and cost.
+2. A change must be equivalent on every path, not only this fixture's (e.g. a judge may not start before a gate
+   that can still repair its input image). No speculative call that a later step may throw away.
+3. Concurrency caps, retry counts, re-ask counts, timeouts, backoff and poll intervals count as thresholds: unchanged.
+   Replay has no rate limits, so a gain there would not hold in production. If one is on the critical path,
+   write it in state.md "For a human".
+4. A gate's decision rule and its commit order (e.g. the sibling headline gate claims in fan-out order) are part of
+   the gate. Call sites may start independent work earlier or stop awaiting what a step does not read.
+5. The workspace is this clone (no remote, outside the user's main checkout), so no extra worktree. Without commits,
+   the kept state is `accepted.patch`; `snapshot.sh restore` puts the tree back to HEAD + that patch.
+6. The repo's work-claim (`npm run work:claim`, GitHub) and changelog-fragment rules need network or a PR; this loop
+   has neither. They apply when a human turns `accepted.patch` into a PR.
+7. The tsc guard runs with `NODE_OPTIONS=--max-old-space-size=4096` (the repo's form of the same command).
+8. Code rules still apply to the change: ≤ 300 lines per file, no `any`, match the surrounding style, and update
+   `services/thumbnail-generator/CLAUDE.md` or `docs/headlines.md` if the change makes a sentence there wrong.
+
+## Never
+
+- Commit, push, merge, rebase, stash, reset or switch branches. Merge, push or publish anything.
+- Call the network: `E2E_MODE=real`, `npm install` / `npm ci` / `npx -y`, `gh`, `git fetch/pull`, `npm run work:*`, curl.
+- Read `.env*`, `~/.config/autokliq/` or any API key.
+- Add, remove or upgrade packages; edit any protected path; change a prompt, model, gate, judge, threshold or flag.
+- Persist anything across runs (a disk cache, a file the next run reads).
+- Edit outside the workspace. Stop jobs or processes that the loop did not start.
+
+## Final report (at DONE or at a stop)
+
+If the tree is not the accepted one, `snapshot.sh restore` first. Then report: baseline median vs the best kept
+median (and the confirm median at DONE), the % change, N = 3, replay mode, `.loop/e2e-speed/measure.sh` over
+`scripts/e2e-gen/measure.sh`, the guard results, each kept change (`results.tsv` keep rows,
+`git diff --stat`), and `accepted.patch` as the deliverable. Nothing is committed.
+
+## Start
+
+```
+/goal Cut the median e2e time (run.queued → run.completed, one 6-concept generation, replay mode) of autokliq thumbnail generation by ≥25% vs commit 48ecd89a (243.99 s → ≤182.993 s) with the same output_sha256 and the same model calls. Work only in &lt;workspace&gt;. At the start of every turn, read .loop/e2e-speed/LOOP.md and .loop/e2e-speed/state.md. On the first turn, run `bash .loop/e2e-speed/check.sh` before any edit.
+MET only when your most recent turn contains the complete stdout of `bash .loop/e2e-speed/check.sh` in a fenced block and its last line is exactly LOOP-DONE. Only check.sh may print LOOP-DONE, LOOP-CONTINUE or LOOP-BLOCKED. Never type them yourself.
+If the last line is LOOP-BLOCKED (an environment error, or the budget is used), stop and report the reason and the best result. Do not work around it. Once LOOP-BLOCKED is shown, the goal is impossible in this session.
+These are NOT reasons to stop: a failing tsc or test, a rejected change, an output_sha256 or model-call mismatch, a slow or noisy measurement, an idea that did not work, several iterations without a win (check.sh counts the budget).
+Each turn, do exactly one iteration (LOOP.md "Iteration"): take the top idea in state.md, make one change, run `bash .loop/e2e-speed/measure.sh candidate "&lt;what changed&gt;"`, then `bash .loop/e2e-speed/snapshot.sh save` on verdict=keep or `bash .loop/e2e-speed/snapshot.sh restore` on verdict=reject, run check.sh, and update state.md. Run every command in the foreground. End every turn with no background shell and no subagent running.
+Never commit, push, merge, stash, reset or switch branches; never call the network (E2E_MODE=real, npm install/ci, npx -y, gh, git fetch, npm run work:*); never read .env* files or API keys; never edit scripts/e2e-gen/, __tests__/offline/, package.json, package-lock.json or another path in LOOP.md "Protected"; never change a prompt, model, gate, judge, threshold, feature flag, concurrency cap, retry count or timeout; never edit outside the workspace. Stop after 15 iterations, 3 hours or 3 rejected iterations in a row (check.sh enforces them) and report: baseline vs best median, the % change, and how it was measured (LOOP.md "Final report").
+```</code></pre></div></details><details><summary>check.sh: 판정기 (65줄)</summary><div class="body"><pre><code>#!/usr/bin/env bash
+# Verifier for loop e2e-speed (LOOP.md). The last line is exactly one of:
+#   LOOP-DONE | LOOP-CONTINUE &lt;reason&gt; | LOOP-BLOCKED &lt;reason&gt;
+# LOOP-BLOCKED: an environment error, or the budget is used (15 iterations, 3 hours, 3 rejects in a row).
+set -uo pipefail
+. "$(cd "$(dirname "$0")" &amp;&amp; pwd)/lib.sh"
+LOG="$LOOP_DIR/last_check.log"
+
+blocked()   { echo "LOOP-BLOCKED $*";  exit 2; }
+continue_() { echo "LOOP-CONTINUE $*"; exit 1; }
+
+# 1. Environment. A system problem is BLOCKED, not CONTINUE.
+for tool in node npx git shasum awk; do command -v "$tool" &gt;/dev/null 2&gt;&amp;1 || blocked "$tool not found"; done
+cd "$WS" || blocked "cannot cd to $WS"
+[ "$(git rev-parse HEAD)" = "$BASE_COMMIT" ] || blocked "HEAD is not $BASE_COMMIT (the loop never commits)"
+node scripts/deps-check.mjs &gt;/dev/null 2&gt;&amp;1 || blocked "node_modules does not match package-lock.json (needs npm ci: network, a human step)"
+[ -f "$LOOP_DIR/baseline.json" ] &amp;&amp; [ -s "$TSV" ] || blocked "no baseline (bash .loop/e2e-speed/measure.sh baseline)"
+[ -f "$LOOP_DIR/started_at" ] || date +%s &gt;"$LOOP_DIR/started_at"
+
+# 2. Where the loop stands.
+target=$(node -p 'require(process.argv[1]).target_s' "$LOOP_DIR/baseline.json")
+base_med=$(node -p 'require(process.argv[1]).median_s' "$LOOP_DIR/baseline.json")
+best_row=$(awk -F'\t' '$3=="keep" || $3=="baseline"' "$TSV" | tail -1)
+best=$(printf '%s' "$best_row" | cut -f4)
+best_tree=$(printf '%s' "$best_row" | cut -f7)
+iters=$(awk -F'\t' '$2=="candidate"' "$TSV" | wc -l | tr -d ' ')
+stuck=$(awk -F'\t' '$2=="candidate" { n = ($3=="keep") ? 0 : n + 1 } END { print n + 0 }' "$TSV")
+hours=$(awk -v s="$(cat "$LOOP_DIR/started_at")" -v n="$(date +%s)" 'BEGIN { printf "%.2f", (n - s) / 3600 }')
+cur=$(tree_hash)
+acc=$(cat "$LOOP_DIR/accepted.tree" 2&gt;/dev/null || echo clean)
+echo "best=${best}s target&lt;=${target}s baseline=${base_med}s change=$(awk -v b="$best" -v a="$base_med" 'BEGIN { printf "%.1f", (b - a) / a * 100 }')%"
+echo "tree=$cur accepted=$best_tree iterations=$iters/15 rejects_in_a_row=$stuck/3 hours=$hours/3"
+
+# 3. The tree must be the accepted state, unprotected, green, and at the target, confirmed by a fresh run.
+reason=""
+if [ "$cur" != "$best_tree" ]; then
+  reason="tree $cur is not the accepted tree $best_tree: measure it (measure.sh candidate) or put it back (snapshot.sh restore)"
+elif [ "$acc" != "$best_tree" ]; then
+  reason="accepted.patch is behind the last keep row: run snapshot.sh save"
+elif v=$(protected_violations) &amp;&amp; [ -n "$v" ]; then
+  reason="protected paths changed: $(echo "$v" | tr '\n' ';')"
+else
+  run_guards "$LOG"
+  g=$?
+  [ "$g" -ne 2 ] || blocked "environment error in the guards, see $LOG"
+  if [ "$g" -ne 0 ]; then
+    reason="guard failed: $GUARD, see $LOG"
+  elif ! awk -v b="$best" -v t="$target" 'BEGIN { exit !(b &lt;= t) }'; then
+    reason="best ${best}s has not reached the target ${target}s"
+  elif ! awk -F'\t' -v t="$cur" '$3=="confirm-pass" &amp;&amp; $7==t { f = 1 } END { exit !f }' "$TSV"; then
+    bash "$LOOP_DIR/measure.sh" confirm &gt;&gt;"$LOG" 2&gt;&amp;1
+    rc=$?
+    grep '^verdict=' "$LOG" | tail -1
+    [ "$rc" -ne 2 ] || blocked "the confirm measurement could not run, see $LOG"
+    [ "$rc" -eq 0 ] || reason="the confirm run missed the target or the guard: $(grep '^reason=' "$LOG" | tail -1)"
+  fi
+fi
+
+[ -n "$reason" ] || { echo "LOOP-DONE"; exit 0; }
+
+# 4. Budget (checked after DONE, so the last iteration can still finish the goal).
+[ "$iters" -lt 15 ] || blocked "budget used: 15 iterations (best ${best}s, target ${target}s)"
+awk -v h="$hours" 'BEGIN { exit !(h &lt; 3) }' || blocked "budget used: 3 hours (best ${best}s, target ${target}s)"
+[ "$stuck" -lt 3 ] || blocked "no progress: 3 rejected iterations in a row (best ${best}s, target ${target}s)"
+continue_ "$reason"</code></pre></div></details><details><summary>measure.sh: 측정기 (137줄)</summary><div class="body"><pre><code>#!/usr/bin/env bash
+# Measures the current tree: protected paths, the guards (pipeline tsc + vitest), then N=3 replay runs
+# of scripts/e2e-gen/measure.sh. Appends one row to results.tsv and prints verdict=... (LOOP.md).
+# Usage: bash .loop/e2e-speed/measure.sh baseline|candidate|confirm ["&lt;what changed&gt;"]
+#   baseline   once, on the clean tree: writes baseline.json (output sha, model calls, median, target)
+#   candidate  after one change: keep (faster beyond noise, same output) or reject
+#   confirm    run by check.sh before DONE: re-measures the accepted tree (guards already ran)
+# Exit 0 = baseline/keep/confirm-pass · 1 = reject/confirm-fail · 2 = not measured, no row (run check.sh)
+set -uo pipefail
+. "$(cd "$(dirname "$0")" &amp;&amp; pwd)/lib.sh"
+MODE="${1:-}"
+NOTE="${2:-}"
+NOTE="${NOTE//$'\t'/ }"
+cd "$WS" || exit 2
+case "$MODE" in baseline|candidate|confirm) ;; *) echo "usage: measure.sh baseline|candidate|confirm [note]" &gt;&amp;2; exit 2 ;; esac
+[ "$(git rev-parse HEAD)" = "$BASE_COMMIT" ] || { echo "not measured: HEAD is not $BASE_COMMIT" &gt;&amp;2; exit 2; }
+tree=$(tree_hash)
+mkdir -p "$LOOP_DIR/logs"
+[ -s "$TSV" ] || printf 'ts\tmode\tverdict\tmedian_s\tspread_s\truns_s\ttree\treason\tnote\n' &gt;"$TSV"
+
+reject() {
+  printf '%s\t%s\treject\t-\t-\t-\t%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$MODE" "$tree" "$1" "$NOTE" &gt;&gt;"$TSV"
+  echo "verdict=reject tree=$tree reason=$1"
+  exit 1
+}
+
+if [ "$MODE" = baseline ]; then
+  [ "$tree" = clean ] || { echo "not measured: the baseline needs the clean tree (HEAD)" &gt;&amp;2; exit 2; }
+  [ ! -f "$LOOP_DIR/baseline.json" ] || { echo "not measured: baseline.json exists" &gt;&amp;2; exit 2; }
+fi
+if [ "$MODE" = candidate ]; then
+  [ "$tree" != clean ] || { echo "not measured: no change vs HEAD" &gt;&amp;2; exit 2; }
+  # One measurement per tree: re-measuring a rejected tree would shop for noise.
+  if awk -F'\t' -v t="$tree" '$2=="candidate" &amp;&amp; $7==t {f=1} END {exit !f}' "$TSV"; then
+    echo "not measured: tree $tree was already measured (see results.tsv)" &gt;&amp;2; exit 2
+  fi
+fi
+
+if [ "$MODE" != confirm ]; then
+  v=$(protected_violations)
+  [ -z "$v" ] || reject "protected paths changed: $(echo "$v" | tr '\n' ';')"
+  glog="${LOOP_DIR#"$WS"/}/logs/guards-$tree.log"
+  run_guards "$WS/$glog"
+  g=$?
+  [ "$g" -ne 2 ] || { echo "not measured: environment error in the guards, see $glog" &gt;&amp;2; exit 2; }
+  [ "$g" -eq 0 ] || reject "guard failed: $GUARD ($glog)"
+fi
+
+label="loop-$MODE-$tree"
+rm -f "scripts/e2e-gen/out/$label.summary.json"
+N=3 bash scripts/e2e-gen/measure.sh "$label" &gt;"$LOOP_DIR/logs/$label.out" 2&gt;&amp;1
+if [ ! -s "scripts/e2e-gen/out/$label.summary.json" ]; then
+  if cat scripts/e2e-gen/out/"$label"-*.log 2&gt;/dev/null | grep -Eq "$ENV_ERR"; then
+    echo "not measured: environment error, see scripts/e2e-gen/out/$label-*.log" &gt;&amp;2; exit 2
+  fi
+  [ "$MODE" != baseline ] || { echo "not measured: the baseline run failed, see scripts/e2e-gen/out/$label-*.log" &gt;&amp;2; exit 2; }
+  reject "the harness produced no result (scripts/e2e-gen/out/$label-*.log)"
+fi
+
+node - "$MODE" "$label" "$TSV" "$LOOP_DIR/baseline.json" "$tree" "$NOTE" "$BASE_COMMIT" &lt;&lt;'EOF'
+const fs = require("node:fs");
+const [mode, label, tsv, basePath, tree, note, commit] = process.argv.slice(2);
+const read = (f) =&gt; JSON.parse(fs.readFileSync(`scripts/e2e-gen/out/${f}`, "utf8"));
+const s = read(`${label}.summary.json`);
+const runs = Array.from({ length: s.n }, (_, i) =&gt; read(`${label}-${i + 1}.json`));
+const base = fs.existsSync(basePath) ? JSON.parse(fs.readFileSync(basePath, "utf8")) : null;
+// Every model call by stage key, model and outcome: no call may be added, dropped, merged or re-tagged.
+const callsOf = (r) =&gt; r.calls.reduce((a, c) =&gt; {
+  const k = `${c.key}|${c.model ?? "-"}|${c.ok ? "ok" : "fail"}`;
+  a[k] = (a[k] ?? 0) + 1;
+  return a;
+}, {});
+const callDiff = (a, b) =&gt; [...new Set([...Object.keys(a), ...Object.keys(b)])].sort()
+  .filter((k) =&gt; a[k] !== b[k]).map((k) =&gt; `${k} ${b[k] ?? 0}-&gt;${a[k] ?? 0}`);
+
+const problems = [];
+if (s.n !== 3) problems.push(`n=${s.n}, needs 3`);
+if (!s.same_output) problems.push("the 3 runs disagree on output_sha256");
+runs.forEach((r, i) =&gt; {
+  const at = `run ${i + 1}:`;
+  if (r.mode !== "replay") problems.push(`${at} mode ${r.mode}`);
+  if (r.status !== "completed" || r.error) problems.push(`${at} status ${r.status} ${r.error ?? ""}`.trim());
+  if (r.blocked.length) problems.push(`${at} blocked network call ${r.blocked.join(" ")}`);
+  if (r.fixtureMisses.length) problems.push(`${at} ${r.fixtureMisses.length} fixture misses (a prompt changed?)`);
+  if (r.concepts.completed !== 6) problems.push(`${at} ${r.concepts.completed}/6 concepts completed`);
+  // e2e comes from the run's own timestamps; it must agree with the wall clock around handlePipelineJob.
+  if (Math.abs(r.wall_s / r.scale - r.e2e_s) &gt; 1) problems.push(`${at} e2e ${r.e2e_s}s but wall ${(r.wall_s / r.scale).toFixed(1)}s`);
+  if (base) {
+    if (r.scale !== base.scale) problems.push(`${at} scale ${r.scale} != ${base.scale}`);
+    if (r.outputSha256 !== base.output_sha256) problems.push(`${at} output_sha256 ${r.outputSha256.slice(0, 12)} != baseline ${base.output_sha256.slice(0, 12)}`);
+    const d = callDiff(callsOf(r), base.calls);
+    if (d.length) problems.push(`${at} model calls differ: ${d.slice(0, 3).join(", ")}`);
+  } else if (i &gt; 0 &amp;&amp; callDiff(callsOf(r), callsOf(runs[0])).length) problems.push(`${at} model calls differ from run 1`);
+});
+
+const med = s.e2e_median_s;
+const spread = s.e2e_spread_s;
+const rows = fs.readFileSync(tsv, "utf8").split("\n").slice(1).filter(Boolean).map((l) =&gt; l.split("\t"));
+let verdict;
+let reason;
+if (mode === "baseline") {
+  if (problems.length) { console.error(`not measured: baseline problems: ${problems.join("; ")}`); process.exit(2); }
+  fs.writeFileSync(basePath, JSON.stringify({
+    commit, measured_at: new Date().toISOString(), command: "N=3 bash scripts/e2e-gen/measure.sh (E2E_MODE=replay)",
+    output_sha256: runs[0].outputSha256, scale: runs[0].scale, median_s: med, spread_s: spread, e2e_s: s.e2e_s,
+    target_s: Number((med * 0.75).toFixed(3)), stages_median_s: s.stages_median_s, calls: callsOf(runs[0]),
+  }, null, 2) + "\n");
+  verdict = "baseline";
+  reason = `target_s=${(med * 0.75).toFixed(3)} (median x 0.75)`;
+} else if (problems.length) {
+  verdict = mode === "confirm" ? "confirm-fail" : "reject";
+  reason = problems.slice(0, 4).join("; ");
+} else if (mode === "confirm") {
+  verdict = med &lt;= base.target_s ? "confirm-pass" : "confirm-fail";
+  reason = `median ${med}s vs target ${base.target_s}s`;
+} else {
+  const best = rows.filter((r) =&gt; r[2] === "keep" || r[2] === "baseline").pop();
+  const bestMed = Number(best[3]);
+  const need = Math.max(2 * Math.max(Number(best[4]), spread), 2.0);
+  verdict = med &lt; bestMed - need ? "keep" : "reject";
+  reason = verdict === "keep"
+    ? `${(med - bestMed).toFixed(2)}s vs best ${bestMed}s (needed more than -${need.toFixed(2)}s)`
+    : `not faster beyond noise: ${med}s vs best ${bestMed}s (needs &lt; ${(bestMed - need).toFixed(2)}s)`;
+}
+const clean = (x) =&gt; String(x).replace(/[\t\n]/g, " ");
+fs.appendFileSync(tsv, [new Date().toISOString().slice(0, 19), mode, verdict, med, spread, s.e2e_s.join(","), tree, clean(reason), clean(note)].join("\t") + "\n");
+
+const b = base ?? { median_s: med, stages_median_s: s.stages_median_s };
+console.log(`verdict=${verdict} median_s=${med} spread_s=${spread} vs_baseline=${(((med - b.median_s) / b.median_s) * 100).toFixed(1)}% tree=${tree}`);
+console.log(`reason=${reason}`);
+console.log("stage                  baseline      now");
+for (const [k, v] of Object.entries(s.stages_median_s)) {
+  console.log(`${k.padEnd(20)} ${String(b.stages_median_s[k]).padStart(10)} ${String(v).padStart(8)}`);
+}
+console.log(`per-run timelines: scripts/e2e-gen/out/${label}-&lt;1..3&gt;.json ("calls": startMs/endMs, wall ms = real s x 100)`);
+process.exit(verdict === "reject" || verdict === "confirm-fail" ? 1 : 0);
+EOF</code></pre></div></details><details><summary>/goal: 시작 한 줄 (6줄)</summary><div class="body"><pre><code>/goal Cut the median e2e time (run.queued → run.completed, one 6-concept generation, replay mode) of autokliq thumbnail generation by ≥25% vs commit 48ecd89a (243.99 s → ≤182.993 s) with the same output_sha256 and the same model calls. Work only in &lt;workspace&gt;. At the start of every turn, read .loop/e2e-speed/LOOP.md and .loop/e2e-speed/state.md. On the first turn, run `bash .loop/e2e-speed/check.sh` before any edit.
+MET only when your most recent turn contains the complete stdout of `bash .loop/e2e-speed/check.sh` in a fenced block and its last line is exactly LOOP-DONE. Only check.sh may print LOOP-DONE, LOOP-CONTINUE or LOOP-BLOCKED. Never type them yourself.
+If the last line is LOOP-BLOCKED (an environment error, or the budget is used), stop and report the reason and the best result. Do not work around it. Once LOOP-BLOCKED is shown, the goal is impossible in this session.
+These are NOT reasons to stop: a failing tsc or test, a rejected change, an output_sha256 or model-call mismatch, a slow or noisy measurement, an idea that did not work, several iterations without a win (check.sh counts the budget).
+Each turn, do exactly one iteration (LOOP.md "Iteration"): take the top idea in state.md, make one change, run `bash .loop/e2e-speed/measure.sh candidate "&lt;what changed&gt;"`, then `bash .loop/e2e-speed/snapshot.sh save` on verdict=keep or `bash .loop/e2e-speed/snapshot.sh restore` on verdict=reject, run check.sh, and update state.md. Run every command in the foreground. End every turn with no background shell and no subagent running.
+Never commit, push, merge, stash, reset or switch branches; never call the network (E2E_MODE=real, npm install/ci, npx -y, gh, git fetch, npm run work:*); never read .env* files or API keys; never edit scripts/e2e-gen/, __tests__/offline/, package.json, package-lock.json or another path in LOOP.md "Protected"; never change a prompt, model, gate, judge, threshold, feature flag, concurrency cap, retry count or timeout; never edit outside the workspace. Stop after 15 iterations, 3 hours or 3 rejected iterations in a row (check.sh enforces them) and report: baseline vs best median, the % change, and how it was measured (LOOP.md "Final report").</code></pre></div></details><details class="more">
+          <summary>함께 만든 파일: lib.sh · snapshot.sh · 설계 시점 state.md</summary>
+          <div class="body">
+            <h4>lib.sh (공통 함수: 보호 경로, tree hash, guard 실행)</h4>
+            <pre><code># Shared by check.sh, measure.sh and snapshot.sh (sourced, never run). See LOOP.md.
+LOOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &amp;&amp; pwd)"
+WS="$(cd "$LOOP_DIR/../.." &amp;&amp; pwd)"
+BASE_COMMIT=48ecd89a9484a82f364aa7efa22e49a258614e96
+TSV="$LOOP_DIR/results.tsv"
+# The loop's own files and the user's untracked skill are not part of "the change".
+PATHSPEC=(-- . ':(exclude).loop' ':(exclude).claude/skills/loop-spec')
+# Paths the loop never changes (LOOP.md "Protected").
+PROTECTED='^(scripts/e2e-gen/|__tests__/(offline|setup)/|package(-lock)?\.json$|cloudbuild\.yaml$|lib/config\.ts$|lib/flags/|lib/fixture-mode\.ts$|services/evaluation/|services/thumbnail-judge/|services/gemini/(fixture-replay|fixture-stub|text-providers)\.ts$|services/image-provider/(fixture-adapter|purpose-context)\.ts$|vitest\.config|tsconfig|\.claude/|\.codex/|\.agents/|CLAUDE\.md$|AGENTS\.md$)|(^|/)prompts/|(^|/)\.env'
+# Existing tests never change or go away (a new test file is fine).
+TESTS='(^|/)__tests__/|\.test\.tsx?$'
+# Read only when a command failed: these mean the machine, not the change.
+ENV_ERR='ENOSPC|no space left on device|EACCES|EPERM|EMFILE|ENOMEM|heap out of memory|command not found'
+
+untracked() { git -C "$WS" ls-files --others --exclude-standard "${PATHSPEC[@]}"; }
+
+# The change vs HEAD as one patch, new files included.
+change_diff() {
+  git -C "$WS" diff --binary --no-renames HEAD "${PATHSPEC[@]}"
+  untracked | while IFS= read -r f; do (cd "$WS" &amp;&amp; git diff --binary --no-index /dev/null "$f") || true; done
+}
+
+tree_hash() {
+  local d
+  d=$(change_diff)
+  if [ -z "$d" ]; then echo clean; else printf '%s' "$d" | shasum -a 256 | cut -c1-12; fi
+}
+
+# Prints "&lt;status&gt; &lt;path&gt;" for every protected path the change touches; prints nothing when clean.
+protected_violations() {
+  { git -C "$WS" diff --name-status --no-renames HEAD "${PATHSPEC[@]}"; untracked | sed 's/^/A	/'; } |
+    while IFS=$'\t' read -r st f; do
+      if printf '%s\n' "$f" | grep -Eq "$PROTECTED"; then echo "$st $f"
+      elif [ "$st" != A ] &amp;&amp; printf '%s\n' "$f" | grep -Eq "$TESTS"; then echo "$st $f (existing test)"
+      fi
+    done
+}
+
+# The user's guards. $1 = log. Returns 0 pass, 1 the change failed them, 2 environment error. Sets GUARD.
+run_guards() {
+  local log=$1 rc
+  GUARD="tsc -p tsconfig.pipeline.json"
+  (cd "$WS" &amp;&amp; NODE_OPTIONS=--max-old-space-size=4096 npx tsc -p tsconfig.pipeline.json --noEmit) &gt;"$log" 2&gt;&amp;1
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    GUARD="vitest run services/thumbnail-generator pipeline-server"
+    (cd "$WS" &amp;&amp; npx vitest run services/thumbnail-generator pipeline-server) &gt;&gt;"$log" 2&gt;&amp;1
+    rc=$?
+  fi
+  [ "$rc" -eq 0 ] &amp;&amp; return 0
+  grep -Eq "$ENV_ERR" "$log" &amp;&amp; return 2
+  return 1
+}</code></pre>
+            <h4>snapshot.sh (commit 없이 채택된 변경을 accepted.patch로 저장·복원)</h4>
+            <pre><code>#!/usr/bin/env bash
+# The accepted state without commits (the loop never commits): HEAD + accepted.patch.
+#   save     after verdict=keep: store the current change as accepted.patch
+#   restore  after verdict=reject: put the tree back to HEAD + accepted.patch
+#   hash     print the current tree hash (the "tree" column of results.tsv)
+set -euo pipefail
+. "$(cd "$(dirname "$0")" &amp;&amp; pwd)/lib.sh"
+cd "$WS"
+
+case "${1:-}" in
+  hash) tree_hash ;;
+  save)
+    cur=$(tree_hash)
+    kept=$(awk -F'\t' '$3=="keep"' "$TSV" | tail -1 | cut -f7)
+    [ "$cur" = "$kept" ] || { echo "refused: tree $cur is not the last kept tree (${kept:-none})" &gt;&amp;2; exit 1; }
+    change_diff &gt;"$LOOP_DIR/accepted.patch"
+    echo "$cur" &gt;"$LOOP_DIR/accepted.tree"
+    echo "saved accepted.patch (tree $cur)"
+    ;;
+  restore)
+    git diff --cached --name-only --diff-filter=A HEAD "${PATHSPEC[@]}" | while IFS= read -r f; do git rm -q --cached -- "$f"; done
+    git checkout HEAD "${PATHSPEC[@]}"
+    untracked | while IFS= read -r f; do echo "removing new file $f"; rm -f -- "$f"; done
+    if [ -s "$LOOP_DIR/accepted.patch" ]; then git apply --binary "$LOOP_DIR/accepted.patch"; fi
+    cur=$(tree_hash)
+    want=$(cat "$LOOP_DIR/accepted.tree" 2&gt;/dev/null || echo clean)
+    [ "$cur" = "$want" ] || { echo "restore left tree $cur, expected $want" &gt;&amp;2; exit 1; }
+    echo "restored the accepted tree ($cur)"
+    ;;
+  *) echo "usage: snapshot.sh save|restore|hash" &gt;&amp;2; exit 2 ;;
+esac</code></pre>
+            <h4>state.md (설계 직후, loop 시작 전)</h4>
+            <pre><code># State: e2e-speed
+
+Read first, update last, every iteration. Numbers come from `results.tsv`, never from memory.
+
+## Goal
+Median e2e (replay, N=3) ≤ 182.993 s (−25 % vs 243.99 s at `48ecd89a`), `output_sha256` `28f5a3e7f838…`,
+same model calls, tsc + vitest green. Details: `LOOP.md`.
+
+## Current best
+243.99 s (baseline, tree `clean`). Loop not started: no `started_at`, 0/15 iterations.
+
+## Baseline critical path (real seconds, `scripts/e2e-gen/out/loop-baseline-clean-1.json`)
+- 0.2–5.2 L1. In parallel, off the path: L0 14.8 s, promise_inventory 4.6 s.
+- 5.3–27.0 L2 (21.7). 27.0–55.1 L3, 3 tier calls in parallel (28.1).
+- 55.2–60.9 L4 (5.7). 60.9–66.7 promise_gate (5.8), alone. 66.8–84.8 L4.5, 6 calls in parallel (18.0).
+- 84.8–91.9 headline first try ×6 (5.9) → headline-verify ×6 (1.2). Concepts 1–2 pass the sibling gate.
+- 91.9–148.2 the sibling gate re-asks concepts 3–6, ONE AT A TIME in fan-out order, 2 rounds each
+  (headline 5.8 + verify 1.2 per round = 14.1 s per concept). L5 starts: 91.9, 91.9, 106.0, 120.1, 134.2, 148.2.
+  This is `utils/headline-sibling-gate.ts` commit order (a re-ask prompt lists the siblings' committed lines): a gate rule.
+- Each concept: L5 9.1 → first_render 63.4 (hook-judge 7.4 in parallel) → render-critic 3.0 ‖ text-verify 3.8 →
+  visual-judge 19.3 ‖ authenticity-judge 3.8. Concept 6: L5 148.2 → render 157.3–220.7 → visual-judge ends 244.0 = done.
+- No idle gaps &gt; 0.1 s between dependent calls: every second on the path is a model call.
+
+## Feasibility note (design-time estimate, not verified)
+The 25 % target needs −61 s. The visible slack that keeps the same prompts and calls: idea 1 (≤ 18 s) and
+idea 2 (≤ 9 s), about −11 %. The 56 s sibling chain is a gate's commit order (LOOP.md assumption 4). Expect the
+loop to stop on "3 rejects in a row" or the budget unless the code shows a dependency this profile does not.
+
+## Next ideas (top first; each is a hypothesis until measured)
+1. Headline derivation waits for L4.5 (84.8 s) but may not read its output (inputs: title, hook, strategic angle,
+   concrete details, brief, content rules). Start each concept's first headline try right after the plan gate,
+   in parallel with L4.5, keeping fan-out commit order. Up to −18 s. Where: `layers/layer-5-6-orchestrator.ts`,
+   `utils/resolve-headline.ts`, the L4.5 caller. Risk: a headline input set by L4.5 → fixture miss → reject.
+2. L5 (visual strategy, 9.1 s) waits for the final headline. If the L5 prompt does not contain the headline text,
+   start L5 alongside the headline chain; render waits for both. Up to −9 s (concept 6). Check the L5 prompt inputs first.
+3. Concept 6 tail: visual-judge waits ~3.8 s for render-critic ‖ text-verify. Only if no gate after the render can
+   change the image the judge sees (text repair, render quality gate) on ANY path. Probably not allowed (assumption 2).
+4. promise_gate (5.8 s) between L4 and L4.5: the gate may swap picks, so L4.5 depends on it. Only if L4.5's input
+   is provably the same: probably not.
+5. Small awaits on the path (DB writes, progress events, uploads) between calls: &lt; 0.1 s each in replay. Low value.
+
+## Tried
+(none yet)
+
+## For a human
+(nothing yet)
+
+## Last check output
+```
+best=243.99s target&lt;=182.993s baseline=243.99s change=0.0%
+tree=clean accepted=clean iterations=0/15 rejects_in_a_row=0/3 hours=0.00/3
+LOOP-CONTINUE best 243.99s has not reached the target 182.993s
+```
+(a design-time run; its `started_at` was deleted so the clock starts with the loop)</code></pre>
+          </div>
+        </details><details class="more">
+          <summary>/goal은 무엇을 하나 (판정기와 Stop hook)</summary>
+          <div class="body">
+            <p><code>/goal</code> 한 줄이 세션에 Stop hook을 겁니다. 모델이 turn을 끝낼 때마다 작은 판정 모델(claude-haiku-5-5)이 대화를 읽고 "가장 최근 turn에 check.sh 출력 전체가 있고 마지막 줄이 정확히 LOOP-DONE인가"만 봅니다. 아니면 "Stop hook feedback"으로 다음 turn이 시작됩니다.</p>
+            <p>그래서 모델이 "다 됐다"고 말해도 끝나지 않습니다. 끝을 정하는 것은 check.sh가 찍은 줄입니다. 이번 loop-1에서 판정기 비용은 <strong>$0.45 (loop-2 $0.42)</strong>였습니다 <span class="tag exp">[실험]</span>.</p>
+          </div>
+        </details></div></details><details><summary>loop가 돈 과정과 single과의 변경 비교</summary><div class="body"><table class="stack"><thead><tr><th>#</th><th>시도한 변경</th><th>판정</th><th class="n">중앙값 (spread)</th><th class="n">turn 비용</th></tr></thead><tbody><tr><th scope="row">기준</th><td data-k="변경">commit 48ecd89a 그대로</td><td data-k="판정">baseline</td><td data-k="중앙값" class="n">243.99 s (0.7)</td><td data-k="비용" class="n">–</td></tr><tr class="keep"><th scope="row">1</th><td data-k="변경">concept row가 생기면 headline(과 render context)을 바로 시작해 L4.5와 함께 돌림</td><td data-k="판정"><span class="badge keep">keep</span> −17.95 s, 기준선 −2.00 s보다 큼</td><td data-k="중앙값" class="n">226.04 s (0.89)</td><td data-k="비용" class="n">$4.14</td></tr><tr><th scope="row">2</th><td data-k="변경">채널 저장 입력(insights, brand kit, content rules, 성과)을 L1·L2와 함께 읽기</td><td data-k="판정"><span class="badge reject">reject</span> 224.04 s 미만이어야 keep</td><td data-k="중앙값" class="n">225.6 s (0.12)</td><td data-k="비용" class="n">$2.06</td></tr><tr><th scope="row">3</th><td data-k="변경">buildSharedRenderContext 안의 독립 읽기들을 함께 시작</td><td data-k="판정"><span class="badge reject">reject</span> 224.04 s 미만이어야 keep</td><td data-k="중앙값" class="n">225.91 s (0.18)</td><td data-k="비용" class="n">$0.97</td></tr><tr><th scope="row">4</th><td data-k="변경">640px 미리보기 resize를 원본 업로드와 겹치기</td><td data-k="판정"><span class="badge reject">reject</span> 221.56 s 미만이어야 keep</td><td data-k="중앙값" class="n">226.17 s (2.24)</td><td data-k="비용" class="n">$0.90</td></tr></tbody></table><p>멈춘 이유, check.sh 마지막 줄 그대로: <code>LOOP-BLOCKED no progress: 3 rejected iterations in a row (best 226.04s, target 182.993s)</code> → 판정기가 failed로 닫음. 15 iterations 중 4회, 3시간 중 0.62시간 사용 <span class="tag exp">실험</span></p>
+          <div class="body">
+<table class="stack"><thead><tr><th>turn</th><th class="n">wall</th><th class="n">API 호출</th><th class="n">input</th><th class="n">cache write 1h</th><th class="n">cache read</th><th class="n">output</th><th class="n">Opus 비용</th><th>판정기</th></tr></thead><tbody>
+<tr><td data-k="turn">1</td><td data-k="wall" class="n">1064 s</td><td data-k="API 호출" class="n">49</td><td data-k="input" class="n">98</td><td data-k="cache write 1h" class="n">188k</td><td data-k="cache read" class="n">6.5M</td><td data-k="output" class="n">66k</td><td data-k="Opus 비용" class="n">$4.14</td><td data-k="판정기">not met</td></tr>
+<tr><td data-k="turn">2</td><td data-k="wall" class="n">580 s</td><td data-k="API 호출" class="n">20</td><td data-k="input" class="n">42</td><td data-k="cache write 1h" class="n">56k</td><td data-k="cache read" class="n">4.6M</td><td data-k="output" class="n">35k</td><td data-k="Opus 비용" class="n">$2.06</td><td data-k="판정기">not met</td></tr>
+<tr><td data-k="turn">3</td><td data-k="wall" class="n">372 s</td><td data-k="API 호출" class="n">10</td><td data-k="input" class="n">22</td><td data-k="cache write 1h" class="n">21k</td><td data-k="cache read" class="n">2.7M</td><td data-k="output" class="n">14k</td><td data-k="Opus 비용" class="n">$0.97</td><td data-k="판정기">not met</td></tr>
+<tr><td data-k="turn">4</td><td data-k="wall" class="n">317 s</td><td data-k="API 호출" class="n">9</td><td data-k="input" class="n">20</td><td data-k="cache write 1h" class="n">18k</td><td data-k="cache read" class="n">2.6M</td><td data-k="output" class="n">12k</td><td data-k="Opus 비용" class="n">$0.90</td><td data-k="판정기">failed (BLOCKED)</td></tr>
+</tbody></table>
+<p class="muted">turn 1에는 시작 check.sh와 iteration 1이 함께 들어 있습니다. 판정기(haiku) 비용 $0.45는 따로입니다. 토큰은 message id로 중복을 지운 값이고, 비용은 Opus 5.5 정가($/MTok: input 4, cache write 1h 8, cache read 0.20, output 20)입니다.</p>
+          </div>
+        <details class="more"><summary>loop-2 (같은 설계로 한 번 더): 같은 첫 keep, 같은 멈춤</summary><div class="body">
+<p>loop-2는 설계를 다시 하지 않고 같은 LOOP.md·check.sh·measure.sh·/goal 줄로 돌렸습니다. iteration 1에서 loop-1과 같은 아이디어(headline을 L4.5와 함께)를 다른 코드로 구현해 17.9 s를 얻었고, 나머지 3개는 0.2~0.4 s 차이로 reject되어 30분, $7.68에 BLOCKED로 멈췄습니다 <span class="tag exp">[실험]</span>.</p>
+<table class="stack"><thead><tr><th>#</th><th>시도한 변경</th><th>판정</th><th class="n">중앙값 (spread)</th><th class="n">turn 비용</th></tr></thead><tbody>
+<tr class=""><td data-k="#">기준</td><td data-k="시도한 변경">commit 48ecd89a 그대로</td><td data-k="판정"><span class="badge cont">baseline</span></td><td data-k="중앙값 (spread)" class="n">243.99 s (0.7)</td><td data-k="turn 비용" class="n">–</td></tr>
+<tr class="keep"><td data-k="#">1</td><td data-k="시도한 변경">concept row가 생기면 render context와 headline을 바로 시작해 L4.5와 함께 돌림</td><td data-k="판정"><span class="badge keep">keep</span><br><span class="muted">−17.89 s, 기준선 −2.00 s보다 큼</span></td><td data-k="중앙값 (spread)" class="n">226.1 s (0.53)</td><td data-k="turn 비용" class="n">$3.71</td></tr>
+<tr class=""><td data-k="#">2</td><td data-k="시도한 변경">concept row 6개를 넣는 동안 shared render context 만들기</td><td data-k="판정"><span class="badge reject">reject</span><br><span class="muted">224.10 s 미만이어야 keep</span></td><td data-k="중앙값 (spread)" class="n">225.7 s (0.05)</td><td data-k="turn 비용" class="n">$0.79</td></tr>
+<tr class=""><td data-k="#">3</td><td data-k="시도한 변경">L2 뒤 채널 읽기와 portfolio 계획을 함께 돌리기</td><td data-k="판정"><span class="badge reject">reject</span><br><span class="muted">224.10 s 미만이어야 keep</span></td><td data-k="중앙값 (spread)" class="n">225.71 s (0.3)</td><td data-k="turn 비용" class="n">$1.10</td></tr>
+<tr class=""><td data-k="#">4</td><td data-k="시도한 변경">concept row 6개를 한 번에(Promise.all) 넣기</td><td data-k="판정"><span class="badge reject">reject</span><br><span class="muted">224.10 s 미만이어야 keep</span></td><td data-k="중앙값 (spread)" class="n">225.89 s (0.21)</td><td data-k="turn 비용" class="n">$1.67</td></tr>
+</tbody></table>
+</div></details><h3>무엇을 바꿨나: single과 loop의 변경 비교</h3>
+          <div class="body">
+<table class="stack"><thead><tr><th>변경</th><th>single-1</th><th>single-2</th><th>loop-1</th><th>loop-2</th><th class="n">replay 효과</th><th>실제 API에서</th></tr></thead><tbody><tr><td data-k="변경">headline을 L4.5와 함께 시작</td><td data-k="single-1">예</td><td data-k="single-2">예</td><td data-k="loop-1">예 (iteration 1)</td><td data-k="loop-2">예 (iteration 1)</td><td data-k="replay 효과" class="n">−18 s</td><td data-k="실제 API에서">유지될 것 <span class="tag est">[추정]</span>: 기다림만 없앰</td></tr><tr><td data-k="변경">sibling gate 추측 실행: 앞 concept들이 첫 시도를 확정한다고 가정하고 재질문을 미리 동시에</td><td data-k="single-1">예</td><td data-k="single-2">예</td><td data-k="loop-1">아니요: 가정 2·4가 금지</td><td data-k="loop-2">아니요</td><td data-k="replay 효과" class="n">−41 s</td><td data-k="실제 API에서">재질문이 headline을 바꾸면 추측이 빗나가 직렬로 돌아감</td></tr><tr><td data-k="변경">visual·authenticity judge를 첫 렌더에서 미리 시작</td><td data-k="single-1">예</td><td data-k="single-2">예</td><td data-k="loop-1">아니요: 가정 2가 금지</td><td data-k="loop-2">아니요</td><td data-k="replay 효과" class="n">−4~5 s</td><td data-k="실제 API에서">수리 render가 생기면 judge 2회를 버림</td></tr><tr><td data-k="변경">작은 I/O 겹치기 (채널 읽기, render context, 업로드, row insert)</td><td data-k="single-1">–</td><td data-k="single-2">–</td><td data-k="loop-1">3개 시도, 모두 reject</td><td data-k="loop-2">3개 시도, 모두 reject</td><td data-k="replay 효과" class="n">0.1~0.5 s</td><td data-k="실제 API에서">운영에서는 소폭 이득 <span class="tag est">[추정]</span></td></tr></tbody></table><p class="muted">replay 효과는 각 에이전트가 변경마다 N=1로 잰 값(single 보고)과 내 단계별 측정에서 읽은 값입니다 <span class="tag exp">[실험]</span>. 두 single은 서로 보지 않고 같은 세 가지에 도달했고, 두 loop도 같은 첫 keep에 도달했습니다.</p>
+          </div>
+        </div></details><details><summary>실제 API 확인 (유료, tree당 2~3회, 크레딧 소진으로 중단)</summary><div class="body">
+          <div class="body">
+<p>replay가 아니라 실제 OpenAI 호출로 기준·loop-1·single-1을 번갈아 돌렸습니다(round마다 순서를 돌림). 격리된 하네스(메모리 DB, 메모리 저장소, api.openai.com만 허용)라 운영 데이터는 건드리지 않았습니다. tree마다 5회를 계획했지만 11번째 run에서 OpenAI가 크레딧 없음(429)을 돌려줘 멈췄고, 유효한 run은 기준 3회, loop-1 3회, single-1 2회입니다. 쓴 비용 $11.05 <span class="tag exp">[실험]</span>.</p><table class="stack"><thead><tr><th>tree</th><th class="n">n</th><th class="n">e2e 중앙값</th><th class="n">범위</th><th class="n">기준 대비 (짝 비율 중앙값)</th><th class="n">수리 이미지</th><th class="n">headline 호출</th><th class="n">마지막 L5 시작</th><th class="n">run당 $</th><th class="n">judge 점수</th></tr></thead><tbody><tr><td data-k="tree">기준 commit</td><td data-k="n" class="n">3</td><td data-k="e2e 중앙값" class="n">289 s</td><td data-k="범위" class="n">259–331 s</td><td data-k="기준 대비 (짝 비율 중앙값)" class="n">–</td><td data-k="수리 이미지" class="n">3,0,0</td><td data-k="headline 호출" class="n">12,16,15</td><td data-k="마지막 L5 시작" class="n">158 s</td><td data-k="run당 $" class="n">$1.15</td><td data-k="judge 점수" class="n">66.8 ± 6.0</td></tr><tr><td data-k="tree">loop-1</td><td data-k="n" class="n">3</td><td data-k="e2e 중앙값" class="n">265 s</td><td data-k="범위" class="n">263–275 s</td><td data-k="기준 대비 (짝 비율 중앙값)" class="n">0.91 (2/3 쌍 &lt; 1)</td><td data-k="수리 이미지" class="n">1,2,1</td><td data-k="headline 호출" class="n">11,15,13</td><td data-k="마지막 L5 시작" class="n">126 s</td><td data-k="run당 $" class="n">$1.29</td><td data-k="judge 점수" class="n">58.6 ± 11.9</td></tr><tr><td data-k="tree">single-1</td><td data-k="n" class="n">2</td><td data-k="e2e 중앙값" class="n">287 s</td><td data-k="범위" class="n">236–338 s</td><td data-k="기준 대비 (짝 비율 중앙값)" class="n">0.94 (1/2 쌍 &lt; 1)</td><td data-k="수리 이미지" class="n">0,1</td><td data-k="headline 호출" class="n">16,17</td><td data-k="마지막 L5 시작" class="n">134 s</td><td data-k="run당 $" class="n">$1.21</td><td data-k="judge 점수" class="n">67.0 ± 6.2</td></tr></tbody></table><p class="muted">수리 이미지: text repair로 다시 그린 이미지 수(장당 약 60 s, run마다 무작위). headline 호출: 첫 시도 6개 + 재질문. 마지막 L5 시작: 마지막 concept이 visual strategy(L5)를 시작한 시각의 중앙값. sibling 재질문 줄이 끝나는 때라 이미지 수리와 무관합니다(replay: 기준 148 s, loop 130 s, single 88 s). judge 점수: visual-judge compositeScore의 concept 평균 ± 표준편차(품질 guard).</p><p><strong>e2e로는 가를 수 없습니다.</strong> run마다 무작위로 생기는 수리 이미지(장당 약 60 s)가 tree 사이 차이보다 큽니다. 기준의 e2e는 259~331 s로 흔들렸습니다 <span class="tag exp">[실험]</span>.</p><p><strong>메커니즘은 보입니다.</strong> 마지막 concept이 L5를 시작하는 시각(sibling 재질문 줄이 끝나는 때)은 replay에서 기준 148 s, loop 130 s, single 88 s였습니다. 실제 API에서는 기준 158 s, loop 126 s, single 134 s(중앙값)였습니다. single의 추측은 재질문이 headline을 실제로 바꾸면 빗나가므로, replay에서 loop보다 앞섰던 42 s가 실제에서는 사라졌습니다. headline 호출은 run당 single 16~17회, loop 11~15회, 기준 12~16회였습니다 <span class="tag exp">[실험]</span>.</p><p><strong>품질 guard는 '확인 안 됨'입니다.</strong> visual-judge 점수 평균은 기준 66.8, single 67.0, loop 58.6입니다. loop의 3회가 모두 기준 3회보다 낮았습니다. 하지만 replay에서 다섯 tree 모두 text 호출 79개 중 73개의 prompt가 기준과 바이트 단위로 같았고(나머지 6개 L5는 기준끼리도 매번 달라짐), loop 점수는 앞서 녹화한 기준 3회(59~67)와 겹칩니다. 이 정도 N으로는 우연과 가를 수 없습니다 <span class="tag exp">[실험]</span>.</p><p class="muted">제외: single-1의 세 번째 run은 크레딧이 떨어지며 호출이 끊겨 5/6 concept만 끝났습니다.</p>
+          </div>
+        </div></details><details><summary>단계별 표 · guard · run별 결과 카드</summary><div class="body">
+          <div class="body">
+<h4>단계별 중앙값 (초, replay, N=5) <span class="tag exp">[실험]</span></h4>
+<table class="stack"><thead><tr><th>단계</th><th class="n">기준</th><th class="n">loop-1</th><th class="n">single-1</th></tr></thead><tbody>
+<tr><td data-k="단계">대기열 → 시작 <code>queue_to_start</code></td><td data-k="기준" class="n">0.0</td><td data-k="loop-1" class="n">0.0</td><td data-k="single-1" class="n">0.1</td></tr>
+<tr><td data-k="단계">시작 → L1 <code>start_to_L1</code></td><td data-k="기준" class="n">5.1</td><td data-k="loop-1" class="n">5.1</td><td data-k="single-1" class="n">5.2</td></tr>
+<tr><td data-k="단계">L0 (병렬) <code>L0</code></td><td data-k="기준" class="n">–</td><td data-k="loop-1" class="n">–</td><td data-k="single-1" class="n">–</td></tr>
+<tr><td data-k="단계">L1 → L2 <code>L1_to_L2</code></td><td data-k="기준" class="n">21.8</td><td data-k="loop-1" class="n">21.7</td><td data-k="single-1" class="n">21.8</td></tr>
+<tr><td data-k="단계">L3 <code>L3</code></td><td data-k="기준" class="n">28.2</td><td data-k="loop-1" class="n">28.1</td><td data-k="single-1" class="n">28.2</td></tr>
+<tr><td data-k="단계">L3.5 (꺼짐) <code>L3.5</code></td><td data-k="기준" class="n">0.0</td><td data-k="loop-1" class="n">0.0</td><td data-k="single-1" class="n">0.0</td></tr>
+<tr><td data-k="단계">L4 <code>L4</code></td><td data-k="기준" class="n">5.7</td><td data-k="loop-1" class="n">5.6</td><td data-k="single-1" class="n">5.8</td></tr>
+<tr><td data-k="단계">L4.5 <code>L4.5</code></td><td data-k="기준" class="n">23.9</td><td data-k="loop-1" class="n">23.9</td><td data-k="single-1" class="n">24.0</td></tr>
+<tr><td data-k="단계">L4.5 → render <code>L4.5_to_render</code></td><td data-k="기준" class="n">0.0</td><td data-k="loop-1" class="n">0.0</td><td data-k="single-1" class="n">0.0</td></tr>
+<tr><td data-k="단계">render 시작 → L5 (headline 포함) <code>render_to_l5</code></td><td data-k="기준" class="n">16.2</td><td data-k="loop-1" class="n">9.2</td><td data-k="single-1" class="n">9.2</td></tr>
+<tr><td data-k="단계">L5 → 첫 이미지 <code>l5_to_first_image</code></td><td data-k="기준" class="n">67.4</td><td data-k="loop-1" class="n">67.5</td><td data-k="single-1" class="n">67.5</td></tr>
+<tr><td data-k="단계">첫 이미지 → 마지막 이미지 <code>first_to_last_image</code></td><td data-k="기준" class="n">56.2</td><td data-k="loop-1" class="n">45.3</td><td data-k="single-1" class="n">3.1</td></tr>
+<tr><td data-k="단계">마지막 이미지 → 완료 (judge) <code>last_image_to_done</code></td><td data-k="기준" class="n">19.3</td><td data-k="loop-1" class="n">19.4</td><td data-k="single-1" class="n">15.5</td></tr>
+<tr><td data-k="단계"><strong>e2e 중앙값</strong></td><td data-k="기준" class="n"><strong>244.0</strong></td><td data-k="loop-1" class="n"><strong>225.8</strong></td><td data-k="single-1" class="n"><strong>180.4</strong></td></tr>
+</tbody></table>
+<p class="muted">각 열은 그 run의 ABBA 측정(기준 5회와 번갈아 5회)의 중앙값입니다. 기준 열은 single-1 측정 때의 기준입니다. 단계 경계는 PIPELINE_STAGES와 같습니다. L0는 병렬이라 "complete" 이벤트가 없어 비어 있습니다.</p>
+<h4>모든 run 비교 <span class="tag exp">[실험]</span></h4>
+<table class="stack"><thead><tr><th>run</th><th class="n">개선 (순서 균형)</th><th>−25% 검증</th><th>에이전트 보고</th><th class="n">Claude 비용</th><th class="n">시간</th><th class="n">tool 호출</th></tr></thead><tbody>
+<tr><td data-k="run">single-1</td><td data-k="개선 (순서 균형)" class="n">26.1%</td><td data-k="−25% 검증"><span class="badge done">통과</span></td><td data-k="에이전트 보고">26.2% "목표 넘음" + replay 과장 단서</td><td data-k="Claude 비용" class="n">$10.33</td><td data-k="시간" class="n">38분</td><td data-k="tool 호출" class="n">92</td></tr>
+<tr><td data-k="run">single-2</td><td data-k="개선 (순서 균형)" class="n">26.3%</td><td data-k="−25% 검증"><span class="badge done">통과</span></td><td data-k="에이전트 보고">26.3% "목표 넘음" + 운영 효과 미확인 단서</td><td data-k="Claude 비용" class="n">$10.94</td><td data-k="시간" class="n">37분</td><td data-k="tool 호출" class="n">129</td></tr>
+<tr><td data-k="run">loop-1</td><td data-k="개선 (순서 균형)" class="n">7.4%</td><td data-k="−25% 검증"><span class="badge reject">미달</span></td><td data-k="에이전트 보고">7.4% "미달" (BLOCKED)</td><td data-k="Claude 비용" class="n">$8.53</td><td data-k="시간" class="n">39분</td><td data-k="tool 호출" class="n">100</td></tr>
+<tr><td data-k="run">loop-2</td><td data-k="개선 (순서 균형)" class="n">7.3%</td><td data-k="−25% 검증"><span class="badge reject">미달</span></td><td data-k="에이전트 보고">7.3% "미달" (BLOCKED)</td><td data-k="Claude 비용" class="n">$7.68</td><td data-k="시간" class="n">30분</td><td data-k="tool 호출" class="n">101</td></tr>
+</tbody></table>
+<p class="muted">개선은 에이전트와 별도로 다시 잰 값입니다: 기준 tree와 번갈아 5쌍(ABBA), 순서 효과를 지운 비율. 에이전트가 보지 못한 스크립트로 쟀습니다. loop 비용에는 판정기(haiku)가 들어 있고, 설계 비용 $3.71는 빠져 있습니다.</p>
+<h4>guard (에이전트와 별도로 돌린 검사) <span class="tag exp">[실험]</span></h4>
+<table class="stack"><thead><tr><th>run</th><th>replay sha 같음</th><th>fixture sha 같음</th><th>호출 목록 같음</th><th>tsc·테스트</th><th>보호 경로</th><th>기존 테스트 수정</th></tr></thead><tbody>
+<tr><td data-k="run">single-1</td><td data-k="replay sha 같음"><span class="badge done">통과</span></td><td data-k="fixture sha 같음"><span class="badge done">통과</span></td><td data-k="호출 목록 같음"><span class="badge done">통과</span></td><td data-k="tsc·테스트"><span class="badge done">통과</span></td><td data-k="보호 경로"><span class="badge done">통과</span></td><td data-k="기존 테스트 수정">있음: 1개 파일의 단언 2개 수정</td></tr>
+<tr><td data-k="run">single-2</td><td data-k="replay sha 같음"><span class="badge done">통과</span></td><td data-k="fixture sha 같음"><span class="badge done">통과</span></td><td data-k="호출 목록 같음"><span class="badge done">통과</span></td><td data-k="tsc·테스트"><span class="badge done">통과</span></td><td data-k="보호 경로"><span class="badge done">통과</span></td><td data-k="기존 테스트 수정">있음: 1개 파일의 기대값에 옵션 1개 추가</td></tr>
+<tr><td data-k="run">loop-1</td><td data-k="replay sha 같음"><span class="badge done">통과</span></td><td data-k="fixture sha 같음"><span class="badge done">통과</span></td><td data-k="호출 목록 같음"><span class="badge done">통과</span></td><td data-k="tsc·테스트"><span class="badge done">통과</span></td><td data-k="보호 경로"><span class="badge done">통과</span></td><td data-k="기존 테스트 수정">없음 (LOOP.md가 금지)</td></tr>
+<tr><td data-k="run">loop-2</td><td data-k="replay sha 같음"><span class="badge done">통과</span></td><td data-k="fixture sha 같음"><span class="badge done">통과</span></td><td data-k="호출 목록 같음"><span class="badge done">통과</span></td><td data-k="tsc·테스트"><span class="badge done">통과</span></td><td data-k="보호 경로"><span class="badge done">통과</span></td><td data-k="기존 테스트 수정">없음 (LOOP.md가 금지)</td></tr>
+</tbody></table>
+<p class="muted">guard 자체도 시험했습니다: judge를 끄거나 prompt 한 글자를 바꾸면 sha가 바뀌어 잡혔고, 의미 없는 <code>await</code> 한 줄은 sha가 그대로였습니다(3/3). replay 호출 목록이 같아도 실제 API에서 호출이 늘 수 있습니다(아래 실제 API 확인).</p>
+          </div>
+        <h3>결과 카드 (run별 모델, 토큰, 비용, 호출, 시간)</h3>
+          <div class="body">
+            <div class="grid2">
+              <div class="card rc"><h4>single-1</h4><dl>
+                <dt>모델</dt><dd>claude-opus-5-5 · effort xhigh</dd>
+                <dt>commit · 모드</dt><dd>48ecd89a · replay, 검증 N=5 ABBA</dd>
+                <dt>시간</dt><dd>38.5분, 93 turns</dd>
+                <dt>토큰</dt><dd>input 174 · cache write 1h 360k · cache read 20.0M · output 173k</dd>
+                <dt>비용 (정가)</dt><dd>$10.33</dd>
+                <dt>호출</dt><dd>API 87회 · tool 92회</dd>
+                <dt>지표</dt><dd>244.0 s → 180.4 s (−26.1%)</dd>
+                <dt>guard</dt><dd>통과</dd>
+                <dt>성공 1건당</dt><dd>$10.33</dd>
+                <dt>사람 개입</dt><dd>0회</dd>
+              </dl></div>
+              <div class="card rc"><h4>single-2</h4><dl>
+                <dt>모델</dt><dd>claude-opus-5-5 · effort xhigh</dd>
+                <dt>commit · 모드</dt><dd>48ecd89a · replay, 검증 N=5 ABBA</dd>
+                <dt>시간</dt><dd>37.0분, 130 turns</dd>
+                <dt>토큰</dt><dd>input 214 · cache write 1h 353k · cache read 24.2M · output 163k</dd>
+                <dt>비용 (정가)</dt><dd>$10.94</dd>
+                <dt>호출</dt><dd>API 107회 · tool 129회</dd>
+                <dt>지표</dt><dd>243.7 s → 179.7 s (−26.3%)</dd>
+                <dt>guard</dt><dd>통과</dd>
+                <dt>성공 1건당</dt><dd>$10.94</dd>
+                <dt>사람 개입</dt><dd>0회</dd>
+              </dl></div>
+              <div class="card rc"><h4>loop-1</h4><dl>
+                <dt>모델</dt><dd>claude-opus-5-5 · effort xhigh · 판정기 haiku</dd>
+                <dt>commit · 모드</dt><dd>48ecd89a · replay, 검증 N=5 ABBA</dd>
+                <dt>시간</dt><dd>39.0분, 104 turns</dd>
+                <dt>토큰</dt><dd>input 182 · cache write 1h 284k · cache read 16.3M · output 127k</dd>
+                <dt>비용 (정가)</dt><dd>$8.53 (판정기 $0.45 포함)</dd>
+                <dt>호출</dt><dd>API 88회 · tool 100회</dd>
+                <dt>지표</dt><dd>243.8 s → 225.8 s (−7.4%)</dd>
+                <dt>guard</dt><dd>통과</dd>
+                <dt>성공 1건당</dt><dd>성공 없음</dd>
+                <dt>사람 개입</dt><dd>0회</dd>
+              </dl></div>
+              <div class="card rc"><h4>loop-2</h4><dl>
+                <dt>모델</dt><dd>claude-opus-5-5 · effort xhigh · 판정기 haiku</dd>
+                <dt>commit · 모드</dt><dd>48ecd89a · replay, 검증 N=5 ABBA</dd>
+                <dt>시간</dt><dd>30.1분, 105 turns</dd>
+                <dt>토큰</dt><dd>input 166 · cache write 1h 260k · cache read 14.9M · output 111k</dd>
+                <dt>비용 (정가)</dt><dd>$7.68 (판정기 $0.42 포함)</dd>
+                <dt>호출</dt><dd>API 80회 · tool 101회</dd>
+                <dt>지표</dt><dd>243.8 s → 225.9 s (−7.3%)</dd>
+                <dt>guard</dt><dd>통과</dd>
+                <dt>성공 1건당</dt><dd>성공 없음</dd>
+                <dt>사람 개입</dt><dd>0회</dd>
+              </dl></div>
+              <div class="card rc"><h4>loop-spec 설계 (한 번)</h4><dl>
+                <dt>모델</dt><dd>claude-opus-5-5 · effort xhigh</dd>
+                <dt>시간</dt><dd>24.8분, 33 turns</dd>
+                <dt>토큰</dt><dd>input 62 · cache write 1h 159k · cache read 3.4M · output 88k</dd>
+                <dt>비용 (정가)</dt><dd>$3.71</dd>
+                <dt>호출</dt><dd>API 31회 · tool 32회</dd>
+                <dt>한 일</dt><dd>baseline 측정 2회, 스크립트 자체 시험, 파일 7개 작성</dd>
+              </dl></div>
+            </div>
+          </div>
+        </div></details><details><summary>조건 · 한계와 확인하지 못한 것</summary><div class="body">
+          <div class="body">
+            <ul class="plain">
+              <li>arm마다 2 run뿐입니다. 2/2 대 0/2는 방향은 분명하지만 N이 작습니다.</li>
+              <li>replay는 녹화된 지연을 0.1배로 재생하므로 CPU 시간은 10배로 보입니다(약 1 s → 10 s). 그래서 작은 CPU 최적화는 replay에서 과대, I/O 최적화는 과소 평가됩니다. loop-1의 iteration 4(업로드 겹치기)는 메모리 저장소라 replay 효과가 0이었습니다.</li>
+              <li>replay fixture는 같은 질문에 늘 같은 답을 돌려줍니다. single의 추측 실행이 replay에서 늘 맞은 이유이고, 이 하네스의 한계입니다.</li>
+              <li>기계는 다른 작업과 함께 쓰였습니다(load 4~150). replay 판정은 ABBA로 순서 효과를 지웠고 A/A 비율은 1.0005였습니다.</li>
+              <li>실제 API 확인은 tree마다 5회를 계획했지만 OpenAI 크레딧이 떨어져 2~3회(최소 2회)에서 멈췄습니다. 이미지 text repair(장당 약 60 s)가 run마다 무작위로 생겨 e2e 흔들림이 수십 초라, 10% 안팎의 차이는 가를 수 없습니다.</li>
+              <li>품질 guard(visual-judge 점수)는 concept마다 흔들림이 큽니다(표준편차 약 13점). 큰 하락만 잡을 수 있습니다.</li>
+              <li>single 2개는 기존 테스트 파일 1개를 고쳤습니다(새 옵션에 맞춘 기대값). 과제 문장은 이를 명시적으로 금하지 않았고, LOOP.md는 금했습니다.</li>
+              <li>전체 테스트(npm run test:run)는 돌리지 않았습니다. single들이 보고한 5개 실패는 측정용 commit이 project hook을 지워서 생긴 것으로, 기준 commit에서도 같습니다(single 보고, 따로 재확인하지 않음).</li>
+              <li>설계는 한 번 했고 두 loop가 같은 설계를 썼습니다. 다른 설계가 다른 가정을 적었다면 결과가 달랐을 수 있습니다.</li>
+              <li>산출물은 원문 그대로 실었습니다. 명령과 코드 이름의 영어 단어도 고치지 않았습니다.</li>
+            </ul>
+          </div>
+        <p class="foot">측정: 2026-10-17~18 (PDT). 대상: autokliq, 측정 하네스만 더한 commit 48ecd89a. 모든 run은 원격을 지운 격리 clone에서 했고 commit·push는 없습니다. 유료 API는 격리 하네스(메모리 DB, 메모리 저장소, api.openai.com만 허용)에서만 불렀습니다. Claude 비용은 정가 환산(Opus 5.5 $/MTok: input 4, cache write 1h 8, cache read 0.20, output 20)입니다.</p></div></details>
+<aside class="speaker-notes" hidden><p>자세한 기록은 접어 두었습니다. 참석자가 치는 그대로의 스킬 프롬프트, /loop-spec이 만든 규칙서와 판정기 전문, iteration마다 무엇을 시도하고 왜 버렸는지, 실제 API 측정과 한계가 있습니다. 발표에서는 열지 않습니다. 내 업무에 loop를 설계할 때 규칙서 전문을 그대로 참고하시면 됩니다.</p><p>참고 — 실제 API 확인 중 2026-10-18 00:29 운영 OpenAI 크레딧 소진(429). 전체 테스트는 돌리지 않음.</p></aside>
+</section>
+
+</main>
+<script>
+function el(id) { return document.getElementById(id); }
+function toggleMenu() { var d = el('vizMenuDropdown'); if (d) d.classList.toggle('open'); }
+document.addEventListener('click', function (e) { if (!e.target.closest('.viz-menu')) { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+var currentTheme = document.documentElement.className === 'theme-dark' ? 'dark' : 'light';
+function applyTheme(t) {
+  document.documentElement.className = 'theme-' + t; currentTheme = t;
+  var l = el('themeLabel'); if (l) l.textContent = t === 'dark' ? '라이트 모드' : '다크 모드';
+  try { localStorage.setItem('viz-theme', t); } catch (e) {}
+}
+function cycleTheme() { applyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+function copyText(btn) {
+  var t = btn.parentNode.textContent.replace(/^(복사됨|복사)/, '').trim();
+  try { navigator.clipboard.writeText(t).then(function () { btn.textContent = '복사됨'; setTimeout(function () { btn.textContent = '복사'; }, 1200); }); } catch (e) {}
+}
+async function downloadImage() {
+  if (typeof htmlToImage === 'undefined') return;
+  var menu = document.querySelector('.viz-menu'); menu.style.display = 'none';
+  try { var url = await htmlToImage.toPng(document.body, { pixelRatio: 2 }); var a = document.createElement('a'); a.href = url; a.download = 'loop-demo.png'; a.click(); }
+  catch (e) { console.warn(e); }
+  menu.style.display = '';
+}
+document.addEventListener('DOMContentLoaded', function () { applyTheme(currentTheme); });
+</script>
+<script>
+/* present.js — presenter mode for long single-page docs (skill manuals, demo result pages).
+   Inline this file verbatim at the end of <body>. No dependencies.
+
+   Markup the page provides:
+     - Stops: elements with [data-stop="짧은 제목"] in document order (the one-screen summary is the first stop).
+     - Notes: inside each stop, <aside class="speaker-notes" hidden><p>말할 것…</p><p>참고 — 말하지 않는 부분</p></aside>
+       Notes never show on the page (hidden + CSS below), on screen or in print.
+     - Optional button: <button class="present-btn" type="button">발표 모드 (P)</button> (wired automatically).
+
+   Reading mode (default): keys and scrolling behave normally.
+   Presenting: press P (or the button). A presenter window opens with the notes; the page you share shows no notes.
+     → Space PageDown: next stop · ← PageUp: previous · Home/End · T: restart timer · Esc on the page: leave presenting.
+     Keys work in both windows; both move together. Manual scrolling on the page updates the current stop. */
+(function () {
+  var stops = Array.prototype.slice.call(document.querySelectorAll('[data-stop]'));
+  if (!stops.length) return;
+  var css = document.createElement('style');
+  css.textContent = '.speaker-notes{display:none !important}[data-stop]{scroll-margin-top:12px}' +
+    '.present-btn{position:fixed;right:16px;bottom:16px;z-index:50;font:600 13px/1 Inter,Pretendard,"Noto Sans KR",sans-serif;' +
+    'padding:9px 12px;border-radius:8px;border:1px solid var(--border,rgba(127,127,127,.35));background:var(--surface,#fff);color:var(--text-secondary,#666);cursor:pointer;opacity:.75}' +
+    '.present-btn:hover{opacity:1}body.presenting .present-btn{display:none}' +
+    '@media print{.present-btn{display:none !important}}';
+  document.head.appendChild(css);
+
+  var cur = 0, win = null, t0 = null, tick = null, presenting = false, lock = 0;
+  function title(i) { var s = stops[i]; return s ? (s.getAttribute('data-stop') || '') : ''; }
+  function notes(i) {
+    var box = stops[i] && stops[i].querySelector('.speaker-notes');
+    return box ? Array.prototype.map.call(box.querySelectorAll('p'), function (p) { return p.textContent.trim(); }).filter(Boolean) : [];
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + pad(s % 60); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function go(i) {
+    if (i < 0 || i >= stops.length) return;
+    cur = i; lock = Date.now();
+    stops[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { history.replaceState(null, '', '#stop-' + (i + 1)); } catch (e) {}
+    update();
+  }
+  // manual scrolling: the stop whose top is nearest above the viewport's upper third becomes current
+  window.addEventListener('scroll', function () {
+    if (!presenting || Date.now() - lock < 900) return;
+    var y = window.innerHeight / 3, best = 0;
+    for (var k = 0; k < stops.length; k++) { if (stops[k].getBoundingClientRect().top <= y) best = k; }
+    if (best !== cur) { cur = best; update(); }
+  }, { passive: true });
+
+  function onKey(e) {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'p' || k === 'P') { e.preventDefault(); openPresenter(); return; }
+    if (!presenting) return;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(stops.length - 1); }
+    else if (k === 't' || k === 'T') { t0 = Date.now(); clock(); }
+    else if (k === 'Escape') { presenting = false; document.body.classList.remove('presenting'); }
+  }
+  document.addEventListener('keydown', onKey);
+  Array.prototype.forEach.call(document.querySelectorAll('.present-btn'), function (b) { b.addEventListener('click', openPresenter); });
+
+  function shell() {
+    var styles = Array.prototype.map.call(document.querySelectorAll('style'), function (st) { return st.textContent; }).join('\n');
+    var links = Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) { return l.outerHTML; }).join('');
+    var pv = 'html,body{height:100%;overflow:hidden}body{margin:0 !important;background:#0A0A0A !important;color:#EDEDED !important;' +
+      'font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",Inter,sans-serif;word-break:keep-all}' +
+      '*,*::before,*::after{animation:none !important;transition:none !important}' +
+      '#pv{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px 22px;height:100%;padding:16px 20px;box-sizing:border-box}' +
+      '#pvTop{grid-column:1 / -1;display:flex;align-items:center;gap:16px;font:700 15px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A}' +
+      '#pvTop b{color:#3b82f6;font-size:17px}#pvClock{margin-left:auto;font:800 26px/1 Inter,sans-serif;color:#EDEDED;font-variant-numeric:tabular-nums}' +
+      '#pvL,#pvR{display:flex;flex-direction:column;gap:10px;min-height:0}' +
+      '.lab{font:700 13px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A;letter-spacing:.03em}' +
+      '#pvTitle{font-size:24px;font-weight:700;line-height:1.3;color:#EDEDED}' +
+      '#pvBox{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:8px;outline:1px solid rgba(255,255,255,.14);background:var(--bg,#fff)}' +
+      '#pvBox > .pvpage{position:absolute;left:0;top:0;width:1280px;transform-origin:0 0;pointer-events:none;padding:16px 24px;box-sizing:border-box;color:var(--text)}' +
+      '#pvNotes{flex:1;min-height:0;overflow:auto;padding-right:6px;font-size:23px;line-height:1.65}' +
+      '#pvNotes p{margin:0 0 14px;color:#EDEDED !important}#pvNotes p.ref{font-size:16px;line-height:1.55;color:#8a8a8a !important;border-top:1px solid rgba(255,255,255,.12);padding-top:10px}' +
+      '#pvNext{font-size:17px;color:#9A9A9A;line-height:1.4}#pvNext b{color:#EDEDED}#pvHelp{font-size:12px;color:#777}';
+    return '<!DOCTYPE html><html lang="ko" class="' + document.documentElement.className + '"' +
+      (document.documentElement.getAttribute('data-theme') ? ' data-theme="' + document.documentElement.getAttribute('data-theme') + '"' : '') +
+      '><head><meta charset="UTF-8"><title>' + esc(document.title) + ' · 발표자 보기</title>' + links +
+      '<style>' + styles + '</style><style>' + pv + '</style></head><body>' +
+      '<div id="pv"><div id="pvTop"><b id="pvNum"></b><span id="pvDoc"></span><span id="pvClock">0:00</span></div>' +
+      '<div id="pvL"><div class="lab">지금 공유 화면의 구간 (미리보기)</div><div id="pvBox"></div></div>' +
+      '<div id="pvR"><div id="pvTitle"></div><div class="lab">스피커 노트 · 회색 “참고”는 말하지 않는 부분</div><div id="pvNotes"></div>' +
+      '<div id="pvNext"></div><div id="pvHelp">→ ← 스페이스: 넘기기 · T: 타이머 다시 시작 · 이 창은 공유하지 마세요</div></div></div></body></html>';
+  }
+  function openPresenter() {
+    presenting = true; document.body.classList.add('presenting');
+    var w = null;
+    try { w = window.open('', 'present-' + location.pathname.split('/').pop(), 'width=1180,height=720'); } catch (e) { w = null; }
+    if (!w) { console.warn('발표자 창을 열지 못했습니다 (팝업 차단?)'); return; }
+    win = w;
+    try {
+      w.document.open(); w.document.write(shell()); w.document.close();
+      w.document.addEventListener('keydown', onKey);
+      w.addEventListener('resize', update);
+    } catch (e) { win = null; return; }
+    if (!t0) t0 = Date.now();
+    if (tick) clearInterval(tick);
+    tick = setInterval(clock, 1000);
+    var h = /^#stop-(\d+)$/.exec(location.hash || '');
+    if (h) cur = Math.min(Math.max(+h[1] - 1, 0), stops.length - 1);
+    update();
+    try { w.focus(); } catch (e) {}
+  }
+  function clock() {
+    if (!win || win.closed) { if (tick) clearInterval(tick); tick = null; win = null; return; }
+    try { win.document.getElementById('pvClock').textContent = fmt((Date.now() - t0) / 1000); } catch (e) {}
+  }
+  function update() {
+    if (!win) return;
+    try {
+      if (win.closed) { win = null; return; }
+      var d = win.document;
+      d.documentElement.className = document.documentElement.className;
+      d.getElementById('pvNum').textContent = (cur + 1) + ' / ' + stops.length;
+      d.getElementById('pvDoc').textContent = document.title;
+      d.getElementById('pvTitle').textContent = title(cur);
+      var box = d.getElementById('pvBox'); box.innerHTML = '';
+      var page = d.createElement('div'); page.className = 'pvpage';
+      var c = stops[cur].cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('.speaker-notes, script'), function (n) { n.remove(); });
+      page.appendChild(c); box.appendChild(page);
+      page.style.transform = 'scale(' + (box.clientWidth / 1280) + ')';
+      var pn = d.getElementById('pvNotes'); pn.innerHTML = '';
+      var ns = notes(cur);
+      if (!ns.length) { var e0 = d.createElement('p'); e0.className = 'ref'; e0.textContent = '이 구간에는 노트가 없습니다.'; pn.appendChild(e0); }
+      ns.forEach(function (t) { var p = d.createElement('p'); p.textContent = t; if (/^참고/.test(t)) p.className = 'ref'; pn.appendChild(p); });
+      pn.scrollTop = 0;
+      d.getElementById('pvNext').innerHTML = cur + 1 < stops.length ? '다음: <b>' + esc(title(cur + 1)) + '</b>' : '마지막 구간입니다.';
+      clock();
+    } catch (e) { win = null; }
+  }
+})();
+</script>
+</body>
+</html>

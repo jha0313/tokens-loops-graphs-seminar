@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ko" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>graph-plan 매뉴얼</title>
+  <meta name="description" content="multi-agent graph가 필요한지 loop로 충분한지 판정하고, 필요할 때만 계약이 붙은 GRAPH.md를 쓰는 스킬의 사용 설명서.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { interpolate-size: allow-keywords; }
+
+    /* ===== THEMES (class-based ONLY) ===== */
+    :root {
+      --bg: #0A0A0A; --surface: #141414; --surface-hover: #1C1C1C;
+      --border: rgba(255,255,255,0.09);
+      --text: #EDEDED; --text-secondary: #9a9a9a;
+      --accent: #3b82f6; --accent-secondary: #8b5cf6;
+      --positive: #10b981; --negative: #f43f5e; --warning: #f59e0b;
+    }
+    html.theme-dark, .theme-dark {
+      --bg: #0A0A0A; --surface: #141414; --surface-hover: #1C1C1C;
+      --border: rgba(255,255,255,0.09);
+      --text: #EDEDED; --text-secondary: #9a9a9a;
+      --accent: #3b82f6; --accent-secondary: #8b5cf6;
+      --positive: #10b981; --negative: #f43f5e; --warning: #f59e0b;
+    }
+    html.theme-light, .theme-light {
+      --bg: #FAFAF9; --surface: #FFFFFF; --surface-hover: #F5F5F4;
+      --border: rgba(15,23,42,0.10);
+      --text: #0f172a; --text-secondary: #5b6474;
+      --accent: #2563eb; --accent-secondary: #7c3aed;
+      --positive: #059669; --negative: #e11d48; --warning: #b45309;
+    }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+    body {
+      font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 1rem;
+      background: var(--bg); color: var(--text);
+      background-image: radial-gradient(ellipse 80% 40% at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+      background-repeat: no-repeat;
+      line-height: 1.75; -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.011em;
+      transition: background-color 0.3s, color 0.3s;
+      scrollbar-gutter: stable;
+      overflow-wrap: break-word;
+    }
+    h1,h2,h3,h4,h5,h6 {
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      text-wrap: balance;
+      word-break: keep-all;
+    }
+    h1 { font-weight: 700; font-size: clamp(2.5rem, 4vw + 1.5rem, 3.5rem); font-family: 'Inter', 'Noto Sans KR', sans-serif; line-height: 1.08; }
+    h2 { font-weight: 700; font-size: clamp(2rem, 1.6vw + 1.5rem, 2.5rem); letter-spacing: -0.02em; }
+    h3 { font-weight: 600; font-size: 1.5rem; letter-spacing: -0.02em; }
+    h4 { font-weight: 600; font-size: 1.125rem; letter-spacing: -0.01em; }
+    body, p, li, td, th, span, label { font-weight: 400; }
+    p, li, td, th, span, label { color: var(--text); }
+    p, li, td, th, dd, figcaption { word-break: keep-all; }
+    .text-secondary { color: var(--text-secondary); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    strong { font-weight: 700; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { text-decoration-thickness: 2px; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+    code, pre, kbd { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { font-size: 0.875em; background: var(--surface-hover); border: 1px solid var(--border); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; word-break: normal; }
+    pre { font-size: 0.875rem; line-height: 1.6; }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      min-width: 0;
+    }
+    .card:hover { box-shadow: 0 0 0 1px var(--border), 0 8px 16px rgba(0,0,0,0.08); }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    .animate { animation: fadeInUp 0.6s ease-out both; }
+    .animate.delay-1 { animation-delay: 0.1s; }
+    .animate.delay-2 { animation-delay: 0.2s; }
+    .animate.delay-3 { animation-delay: 0.3s; }
+    .animate.delay-4 { animation-delay: 0.4s; }
+    .animate.delay-5 { animation-delay: 0.5s; }
+    .animate.delay-6 { animation-delay: 0.6s; }
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ===== MENU ===== */
+    .viz-menu { position: fixed; top: 12px; right: 16px; z-index: 9999; }
+    .viz-menu-toggle {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(12px); transition: background 0.2s;
+    }
+    .viz-menu-toggle:hover { background: var(--surface-hover); }
+    .viz-menu-dropdown {
+      position: absolute; top: 52px; right: 0; min-width: 200px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px;
+      opacity: 0; visibility: hidden; transform: translateY(-8px);
+      transition: all 0.2s; backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    }
+    .viz-menu-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+    .viz-menu-dropdown button {
+      width: 100%; padding: 10px 14px; border: none; border-radius: 8px;
+      background: transparent; color: var(--text); font-size: 14px;
+      font-family: 'Inter', 'Noto Sans KR', sans-serif; cursor: pointer; text-align: left;
+      display: flex; align-items: center; gap: 10px; transition: background 0.15s;
+    }
+    .viz-menu-dropdown button:hover { background: var(--surface-hover); }
+    .viz-menu-dropdown svg { flex: none; }
+
+    /* ===== SKIP TO CONTENT ===== */
+    .skip-to-content {
+      position: absolute; top: -40px; left: 6px; background: var(--accent);
+      color: white; padding: 8px 12px; text-decoration: none;
+      border-radius: 4px; opacity: 0; pointer-events: none;
+      transition: all 0.2s; z-index: 10000;
+    }
+    .skip-to-content:focus { top: 6px; opacity: 1; pointer-events: auto; }
+
+    /* ===== DETAILS ===== */
+    details { overflow: hidden; }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    ::details-content { transition: block-size 0.3s ease, opacity 0.3s ease; block-size: 0; opacity: 0; overflow: hidden; }
+    details[open]::details-content { block-size: auto; opacity: 1; }
+
+    [popover] {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; max-width: 320px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2); color: var(--text);
+    }
+    [popover]::backdrop { background: rgba(0,0,0,0.3); }
+
+    /* ===== PAGE LAYOUT ===== */
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+    .site-header { padding: 18px 0 0; }
+    .site-header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-right: 84px; }
+    .brand { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0; }
+    .manual-switch { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
+    .manual-switch a {
+      display: inline-block; font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 500;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+      color: var(--text-secondary); text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .manual-switch a:hover { background: var(--surface-hover); color: var(--text); }
+    .manual-switch a[aria-current="page"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+    .toc { position: sticky; top: 0; z-index: 50; margin-top: 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+    .toc .wrap { padding-right: 84px; }
+    .toc ol { display: flex; gap: 4px; list-style: none; overflow-x: auto; white-space: nowrap; padding: 10px 0; scrollbar-width: none; }
+    .toc ol::-webkit-scrollbar { display: none; }
+    .toc li { white-space: nowrap; }
+    @media (min-width: 769px) { .toc ol { flex-wrap: wrap; white-space: normal; overflow-x: visible; } }
+    .toc a {
+      display: inline-block; padding: 6px 10px; border-radius: 8px; font-size: 0.875rem; font-weight: 500;
+      color: var(--text-secondary); text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .toc a:hover, .toc a.active { background: var(--surface-hover); color: var(--text); }
+    .toc .num { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; color: var(--accent); margin-right: 4px; font-weight: 600; }
+
+    main { display: block; }
+    .hero { padding: 56px 0 24px; margin-bottom: 72px; }
+    .eyebrow { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+    .hero h1 { margin-bottom: 20px; overflow-wrap: break-word; }
+    .lede { font-size: 1.1875rem; line-height: 1.75; color: var(--text); max-width: 46em; }
+    .hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; margin-top: 36px; align-items: start; }
+    .hero-stat .stat-value { font-family: 'Inter', sans-serif; font-size: clamp(2.5rem, 7vw, 3.75rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .hero-stat .stat-label { margin-top: 10px; font-size: 1rem; color: var(--text-secondary); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; }
+    .chips li { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.8125rem; font-weight: 500; padding: 5px 10px; border-radius: 999px; background: var(--surface-hover); border: 1px solid var(--border); color: var(--text); }
+    .legend { margin-top: 18px; font-size: 0.875rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+
+    .doc-section { margin-bottom: 104px; }
+    .sec-head { margin-bottom: 28px; }
+    .sec-num { font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.06em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .sec-head p { margin-top: 12px; color: var(--text-secondary); max-width: 44em; }
+    .sub { margin: 56px 0 16px; }
+    .sub:first-child { margin-top: 0; }
+    .doc-section p + p { margin-top: 12px; }
+    .prose { max-width: 46em; }
+    .prose ul, .prose ol, .list { padding-left: 1.25em; }
+    .prose li + li, .list li + li { margin-top: 6px; }
+    .muted { color: var(--text-secondary); }
+    .small { font-size: 1rem; }
+    .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; } .mt-32 { margin-top: 32px; }
+
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+    .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+    .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+    .card h3, .card h4 { margin-bottom: 8px; }
+    .card p { font-size: 1rem; }
+    .card .k { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+
+    /* evidence tags */
+    .tag { display: inline-block; font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 600; line-height: 1.5; padding: 0 6px; border-radius: 4px; vertical-align: 0.1em; white-space: nowrap; border: 1px solid transparent; }
+    .t-exp { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+    .t-pub { color: var(--accent-secondary); background: color-mix(in srgb, var(--accent-secondary) 12%, transparent); border-color: color-mix(in srgb, var(--accent-secondary) 35%, transparent); }
+    .t-des { color: var(--text-secondary); background: var(--surface-hover); border-color: var(--border); }
+    .src { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+
+    /* scene / callout */
+    .scene { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 8px 8px 0; padding: 22px 24px; font-size: 1.0625rem; }
+    .scene p + p { margin-top: 10px; }
+    .callout { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 18px 20px; }
+    .callout.warn { border-color: color-mix(in srgb, var(--warning) 45%, transparent); background: color-mix(in srgb, var(--warning) 7%, var(--surface)); }
+    .callout.bad { border-color: color-mix(in srgb, var(--negative) 45%, transparent); background: color-mix(in srgb, var(--negative) 6%, var(--surface)); }
+    .callout.good { border-color: color-mix(in srgb, var(--positive) 45%, transparent); background: color-mix(in srgb, var(--positive) 6%, var(--surface)); }
+    .callout-title { font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .callout-title svg { flex: none; }
+
+    .evidence { list-style: none; display: grid; gap: 10px; }
+    .evidence li { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 1rem; }
+    .evidence li .tag { margin-right: 6px; }
+
+    .stat-row { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); margin: 24px 0; }
+    .stat-row .card { padding: 20px; }
+    .stat-row .v { font-family: 'Inter', sans-serif; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; }
+    .stat-row .v.accent { color: var(--accent); }
+    .stat-row .l { font-size: 0.875rem; color: var(--text-secondary); margin-top: 6px; }
+
+    /* IO diagram */
+    .io { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); gap: 12px; align-items: stretch; }
+    .io .card { padding: 18px; }
+    .io .arrow { display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+    .io ul { list-style: none; display: grid; gap: 6px; font-size: 1rem; }
+    .io li { line-height: 1.55; }
+    @media (max-width: 760px) {
+      .io { grid-template-columns: minmax(0,1fr); }
+      .io .arrow svg { transform: rotate(90deg); }
+    }
+
+    /* step flow */
+    .flow { list-style: none; counter-reset: step; display: grid; gap: 0; }
+    .flow > li { position: relative; padding: 0 0 22px 56px; counter-increment: step; }
+    .flow > li::before {
+      content: counter(step); position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1rem;
+      background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .flow > li::after { content: ""; position: absolute; left: 17px; top: 40px; bottom: 4px; width: 2px; background: var(--border); }
+    .flow > li:last-child::after { display: none; }
+    .flow > li:last-child { padding-bottom: 0; }
+    .flow .step-title { font-weight: 700; font-size: 1.0625rem; line-height: 36px; }
+    .flow .step-body { font-size: 1rem; color: var(--text); margin-top: 2px; }
+    .flow .step-body .muted { font-size: 1rem; }
+    .flow .branch { margin-top: 10px; border: 1px dashed color-mix(in srgb, var(--negative) 55%, transparent); border-radius: 8px; padding: 10px 14px; font-size: 0.875rem; background: color-mix(in srgb, var(--negative) 5%, transparent); }
+    .flow .branch.ok { border-color: color-mix(in srgb, var(--positive) 55%, transparent); background: color-mix(in srgb, var(--positive) 5%, transparent); }
+
+    /* tables */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); max-width: 100%; }
+    table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+    table.wide { min-width: 680px; }
+    table.mid { min-width: 520px; }
+    th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--border); line-height: 1.6; }
+    th { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); background: var(--surface-hover); white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: color-mix(in srgb, var(--surface-hover) 60%, transparent); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-family: 'Inter', sans-serif; }
+    .lvl { display: inline-block; font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 4px; }
+    .lvl-HIGH { color: var(--negative); background: color-mix(in srgb, var(--negative) 12%, transparent); }
+    .lvl-MEDIUM { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+    .lvl-INFO { color: var(--text-secondary); background: var(--surface-hover); }
+    .caption { font-size: 0.8125rem; color: var(--text-secondary); margin-top: 8px; }
+
+    /* code blocks */
+    .code-block { position: relative; margin-top: 12px; }
+    .code-block pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; padding-top: 40px; overflow-x: auto; max-width: 100%; color: var(--text); }
+    .code-block .code-label { position: absolute; top: 10px; left: 16px; font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px; font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 600;
+      padding: 4px 10px; min-height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-hover); color: var(--text);
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .copy-btn:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
+    .copy-btn.done { color: var(--positive); border-color: color-mix(in srgb, var(--positive) 50%, transparent); }
+    .hl-k { color: var(--accent); }
+    .hl-c { color: var(--text-secondary); }
+    .hl-s { color: var(--accent-secondary); }
+
+    /* prompts */
+    .prompts { display: grid; gap: 18px; }
+    .prompt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: box-shadow 0.2s; }
+    .prompt-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.10); }
+    .prompt-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px 0; }
+    .prompt-card .p-num { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--accent); font-size: 0.875rem; }
+    .prompt-card .p-kind { font-size: 0.8125rem; color: var(--text-secondary); }
+    .pill-push { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent); }
+    .prompt-text { position: relative; margin: 12px 18px 0; }
+    .prompt-text pre { white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-family: 'Noto Sans KR', 'Inter', sans-serif; font-size: 1rem; line-height: 1.7; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; padding-right: 76px; color: var(--text); }
+    .prompt-text .equiv { margin-top: 8px; font-size: 0.8125rem; color: var(--text-secondary); }
+    .outcome { padding: 14px 18px 18px; font-size: 1rem; }
+    .outcome .o-label { font-weight: 700; font-size: 0.8125rem; color: var(--positive); margin-bottom: 4px; display: block; }
+    .outcome ul { padding-left: 1.2em; }
+    .outcome li + li { margin-top: 4px; }
+
+    /* expect columns */
+    .expect { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+    .expect .card h3 { display: flex; align-items: center; gap: 10px; font-size: 1.5rem; margin-bottom: 14px; }
+    .expect ul { list-style: none; display: grid; gap: 12px; }
+    .expect li { font-size: 1rem; padding-left: 16px; position: relative; }
+    .expect li::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
+    .expect .no li::before { background: var(--negative); }
+    .expect .yes { border-top: 3px solid var(--positive); }
+    .expect .no { border-top: 3px solid var(--negative); }
+
+    /* tools (calculators, quizzes) */
+    .tool { background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: 10px; padding: 22px; }
+    .tool h4 { display: flex; align-items: center; gap: 8px; }
+    .tool-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); margin-top: 14px; }
+    .field label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+    .field input[type="number"], .field input[type="text"], .field select, .search {
+      width: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 1rem; padding: 9px 11px; min-height: 40px;
+      border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    }
+    .field input:focus, .field select:focus, .search:focus { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 0; }
+    .check { display: flex; align-items: center; gap: 8px; font-size: 1rem; cursor: pointer; }
+    .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .result { margin-top: 16px; border-radius: 8px; padding: 14px 16px; background: var(--surface-hover); border: 1px solid var(--border); font-size: 1rem; }
+    .result.ok { border-color: color-mix(in srgb, var(--positive) 50%, transparent); background: color-mix(in srgb, var(--positive) 8%, var(--surface)); }
+    .result.no { border-color: color-mix(in srgb, var(--negative) 50%, transparent); background: color-mix(in srgb, var(--negative) 7%, var(--surface)); }
+    .result.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: color-mix(in srgb, var(--warning) 8%, var(--surface)); }
+    .result strong { display: block; font-size: 1.0625rem; margin-bottom: 4px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .filters .search { max-width: 280px; }
+    .fbtn { font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600; padding: 6px 12px; min-height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .fbtn:hover { color: var(--text); background: var(--surface-hover); }
+    .fbtn[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .seg button { font-family: 'Noto Sans KR', 'Inter', sans-serif; font-size: 0.875rem; padding: 6px 14px; min-height: 36px; border: none; background: var(--bg); color: var(--text-secondary); cursor: pointer; }
+    .seg button + button { border-left: 1px solid var(--border); }
+    .seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); font-weight: 600; }
+    .bars { display: grid; gap: 8px; margin-top: 12px; }
+    .bar-row { display: grid; grid-template-columns: 92px minmax(0,1fr) 56px; gap: 8px; align-items: center; font-size: 0.8125rem; }
+    .bar-track { height: 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width 0.3s; }
+    .bar-fill.alt { background: var(--accent-secondary); }
+    .bar-row .pct { text-align: right; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+    /* svg diagrams */
+    .diagram { margin: 8px auto 0; max-width: 560px; }
+    .diagram svg { width: 100%; height: auto; display: block; }
+    .diagram figcaption { text-align: center; font-size: 0.8125rem; color: var(--text-secondary); margin-top: 8px; }
+    .svg-box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+    .svg-box.acc { stroke: var(--accent); }
+    .svg-box.acc2 { stroke: var(--accent-secondary); }
+    .svg-box.pos { stroke: var(--positive); }
+    .svg-box.neg { stroke: var(--negative); }
+    .svg-box.warnb { stroke: var(--warning); }
+    .svg-t { fill: var(--text); font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 600; }
+    .svg-s { fill: var(--text-secondary); font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 12px; }
+    .svg-m { fill: var(--text); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; }
+    .svg-line { stroke: var(--text-secondary); stroke-width: 1.5; fill: none; }
+    .svg-line.acc { stroke: var(--accent); }
+    .svg-line.pos { stroke: var(--positive); }
+    .svg-line.neg { stroke: var(--negative); }
+    .svg-line.warnl { stroke: var(--warning); }
+    .svg-dash { stroke-dasharray: 5 4; }
+    .svg-arrow { fill: var(--text-secondary); }
+
+    details.more { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); margin-top: 16px; }
+    details.more summary { padding: 14px 18px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    details.more summary::after { content: "+"; font-family: 'Inter', sans-serif; font-size: 1.25rem; color: var(--text-secondary); }
+    details.more[open] summary::after { content: "−"; }
+    details.more .more-body { padding: 0 18px 18px; }
+
+    .page-footer { border-top: 1px solid var(--border); padding: 40px 0 56px; margin-top: 24px; }
+    .page-footer p { font-size: 0.875rem; color: var(--text-secondary); }
+    .page-footer p + p { margin-top: 8px; }
+    .page-footer .manual-switch { margin-top: 16px; }
+
+    @media (max-width: 768px) {
+      .wrap { padding: 0 16px; }
+      .hero { padding-top: 36px; margin-bottom: 56px; }
+      .doc-section { margin-bottom: 72px; }
+      .sub { margin-top: 44px; }
+      .lede { font-size: 1.0625rem; }
+      .scene { padding: 18px; font-size: 1rem; }
+      .tool { padding: 18px; }
+      th, td { padding: 10px 12px; }
+    }
+    @media (max-width: 375px) {
+      body { overflow-x: hidden; }
+      .card { padding: 16px; }
+      .stat-value { font-size: 2rem; }
+      .flow > li { padding-left: 48px; }
+      .bar-row { grid-template-columns: 78px minmax(0,1fr) 48px; }
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { background: white !important; color: black !important; background-image: none !important; }
+      .viz-menu, .toc, .copy-btn, .skip-to-content { display: none !important; }
+      .reveal { opacity: 1 !important; transform: none !important; }
+      .card, .prompt-card, .tool, .callout, .table-wrap, .code-block { break-inside: avoid; box-shadow: none; }
+      details::details-content { block-size: auto !important; opacity: 1 !important; content-visibility: visible !important; }
+      .table-wrap { overflow: visible; }
+      table.wide, table.mid { min-width: 0; }
+      pre { white-space: pre-wrap; word-break: break-all; }
+      a { color: inherit; }
+      * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+    @page { margin: 0.7in; @bottom-center { content: "Page " counter(page); font-size: 9pt; color: #666; } }
+
+    /* recommendation cards (loop, graph) */
+    .rec-intro { margin-bottom: 20px; }
+    .rec-list { display: grid; gap: 20px; }
+    .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: box-shadow 0.2s; min-width: 0; }
+    .rec-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.10); }
+    .rec-card > header { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin-bottom: 18px; }
+    .rec-card .r-num { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.5rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .rec-card h3 { font-size: 1.5rem; }
+    .rec-card .r-sub { width: 100%; font-size: 1rem; color: var(--text-secondary); }
+    .rec-body { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px 28px; }
+    .rec-field .k { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+    .rec-field p, .rec-field li { font-size: 1rem; }
+    .rec-field ul { padding-left: 1.15em; }
+    .rec-field li + li { margin-top: 4px; }
+    .rec-field + .rec-field { margin-top: 18px; }
+    .verdicts { display: grid; gap: 8px; }
+    .verdict { display: grid; grid-template-columns: 128px minmax(0,1fr); gap: 10px; align-items: start; font-size: 1rem; line-height: 1.6; }
+    .vtok { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6875rem; font-weight: 600; padding: 3px 6px; border-radius: 4px; text-align: center; white-space: nowrap; }
+    .vtok.done { color: var(--positive); background: color-mix(in srgb, var(--positive) 12%, transparent); }
+    .vtok.cont { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .vtok.blk { color: var(--negative); background: color-mix(in srgb, var(--negative) 12%, transparent); }
+    .rec-card .prompt-text { margin: 20px 0 0; }
+    .rec-extra { margin-top: 20px; }
+    .not-yet { margin-top: 20px; border: 1px dashed color-mix(in srgb, var(--text-secondary) 45%, transparent); border-radius: 10px; padding: 18px 20px; background: var(--bg); }
+    .not-yet h3 { font-size: 1.5rem; margin-bottom: 10px; }
+    .not-yet ul { list-style: none; display: grid; gap: 10px; }
+    .not-yet li { font-size: 1rem; padding-left: 22px; position: relative; }
+    .not-yet li::before { content: ""; position: absolute; left: 2px; top: 0.55em; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--text-secondary); }
+    @media (max-width: 760px) { .rec-body { grid-template-columns: minmax(0,1fr); } .rec-card { padding: 18px; } }
+    @media (max-width: 375px) { .verdict { grid-template-columns: minmax(0,1fr); gap: 4px; } .vtok { justify-self: start; } }
+
+    /* ===== PAGE STYLES ===== */
+    /* ===== one-screen summary + progressive disclosure (loop, graph) ===== */
+    .doc-section { margin-bottom: 40px; }
+    .page-footer { padding: 32px 0 40px; }
+    .toc ol { gap: 2px; padding: 8px 0; }
+    .toc a { padding: 5px 8px; }
+    .sec-head { margin-bottom: 20px; }
+    .sec-head .lead { color: var(--text); font-size: 1.0625rem; }
+
+    /* summary */
+    .hero.summary { padding: 16px 0 0; margin-bottom: 40px; }
+    .summary .eyebrow { margin-bottom: 4px; }
+    .summary h1 { font-size: clamp(2rem, 2vw + 1.4rem, 2.625rem); margin-bottom: 6px; }
+    .summary .lede { font-size: 1.25rem; font-weight: 500; line-height: 1.6; max-width: none; }
+    .sum-grid { display: grid; gap: 14px; grid-template-columns: minmax(0,1.3fr) minmax(0,1.45fr) minmax(0,0.85fr); margin-top: 18px; align-items: stretch; }
+    .sum-grid > .card { padding: 16px 18px; }
+    .sum-grid .k { margin-bottom: 10px; }
+    .cmd { display: flex; align-items: center; gap: 8px; }
+    .cmd pre { flex: 1; min-width: 0; font-size: 0.875rem; line-height: 1.5; background: var(--bg); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 8px; padding: 10px 12px; white-space: pre; overflow-x: auto; color: var(--text); }
+    .cmd .copy-btn { position: static; flex: none; }
+    .sum-note { font-size: 1rem; color: var(--text-secondary); margin-top: 10px; line-height: 1.6; }
+    .summary .hero-stat .stat-value { font-size: 2.25rem; }
+    .summary .hero-stat .stat-label { font-size: 1rem; line-height: 1.6; margin-top: 8px; }
+    .pic { display: grid; gap: 8px; }
+    .pic-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 1rem; }
+    .pic-box { border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 0.875rem; line-height: 1.5; }
+    .pic-box.acc { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+    .pic-box code { margin-right: 2px; }
+    .pic-arrow { color: var(--text-secondary); font-size: 0.8125rem; font-weight: 600; }
+    .pic-out { list-style: none; display: grid; gap: 6px; }
+    .pic-out li { display: grid; grid-template-columns: 124px minmax(0,1fr); gap: 10px; align-items: center; font-size: 1rem; line-height: 1.45; }
+    .pic-out .vtok { font-size: 0.6875rem; }
+    .pic-out.short li { grid-template-columns: 64px minmax(0,1fr); }
+    .pic-out .otok { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; text-align: center; white-space: nowrap; background: var(--surface-hover); color: var(--text-secondary); }
+    .pic-out .otok.g { color: var(--accent-secondary); background: color-mix(in srgb, var(--accent-secondary) 12%, transparent); }
+    .pic-out .otok.l { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .fit { display: grid; gap: 14px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); margin-top: 14px; }
+    .fit p { border-radius: 8px; padding: 10px 14px; font-size: 1rem; line-height: 1.6; background: var(--surface); border: 1px solid var(--border); }
+    .fit p strong { display: block; font-size: 0.8125rem; margin-bottom: 2px; }
+    .fit .y { border-left: 3px solid var(--positive); }
+    .fit .y strong { color: var(--positive); }
+    .fit .n { border-left: 3px solid var(--negative); }
+    .fit .n strong { color: var(--negative); }
+    .summary .legend { margin-top: 10px; font-size: 0.8125rem; }
+
+    /* plain-language glosses */
+    .gloss { color: var(--text-secondary); font-size: 0.85em; font-weight: 400; }
+    .terms { border: 1px dashed var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
+    .terms .terms-k { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+    .terms dl { display: grid; gap: 4px 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+    .terms dl > div { font-size: 1rem; line-height: 1.6; }
+    .terms dt { display: inline; font-weight: 700; }
+    .terms dd { display: inline; color: var(--text-secondary); }
+
+    /* details */
+    .more-list { display: grid; gap: 8px; margin-top: 20px; }
+    .more-list > details.more { margin-top: 0; }
+    details.more summary { padding: 9px 16px; font-size: 1rem; }
+    details.more summary::after { line-height: 1; }
+    details.more.warn { border-color: color-mix(in srgb, var(--warning) 45%, transparent); background: color-mix(in srgb, var(--warning) 6%, var(--surface)); }
+    details.more summary .pre { color: var(--text-secondary); font-weight: 500; }
+    details.more summary:hover { background: var(--surface-hover); }
+    details.more .more-body { padding: 4px 16px 18px; }
+    details.more .more-body > .sub:first-child, details.more .more-body > h4:first-child { margin-top: 0; }
+    details.fold { margin-top: 14px; border-top: 1px solid var(--border); }
+    details.fold > summary { padding: 10px 0 0; font-size: 0.875rem; font-weight: 600; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+    details.fold > summary::before { content: "+"; font-family: 'Inter', sans-serif; font-weight: 700; width: 1em; }
+    details.fold[open] > summary::before { content: "−"; }
+    details.fold .fold-body { padding-top: 12px; }
+    .prompt-card details.fold { margin: 12px 18px 16px; }
+    .prompt-card details.fold .outcome { padding: 0; }
+    .src a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+    .src a:hover { color: var(--accent); }
+    .sub { margin: 32px 0 14px; }
+
+    /* section 3 figure: step list + iteration diagram */
+    .duo { display: grid; gap: 20px 32px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: center; margin: 0; }
+    .duo .diagram { margin: 0 auto; max-width: 340px; width: 100%; }
+    .steps8 { list-style: none; counter-reset: s8; display: grid; gap: 6px; }
+    .steps8 li { counter-increment: s8; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 1rem; font-weight: 600; line-height: 1.45; padding: 7px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+    .steps8 li::before { content: counter(s8); font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 700; color: var(--accent); min-width: 1.2em; }
+    .steps8 li.key { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+    .steps8 .st-note { font-size: 0.75rem; font-weight: 600; padding: 1px 7px; border-radius: 999px; color: var(--negative); background: color-mix(in srgb, var(--negative) 10%, transparent); }
+    .steps8 .st-note.ok { color: var(--positive); background: color-mix(in srgb, var(--positive) 10%, transparent); }
+    .duo-cap { grid-column: 1 / -1; }
+
+    /* layer test quiz: question and buttons on one row */
+    #layer-tool .lq { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 16px; align-items: center; }
+    #layer-tool .lq > p { grid-column: 1; }
+    #layer-tool .lq .seg { margin-top: 0; grid-column: 2; grid-row: 1 / span 2; }
+    #layer-tool ol.list { gap: 10px !important; }
+    @media (max-width: 560px) {
+      #layer-tool .lq { grid-template-columns: minmax(0,1fr); }
+      #layer-tool .lq .seg { grid-column: 1; grid-row: auto; margin-top: 8px; justify-self: start; }
+    }
+
+    /* horizontal step flow (desktop) */
+    @media (min-width: 900px) {
+      .flow.h { grid-template-columns: repeat(var(--n, 5), minmax(0,1fr)); gap: 14px; }
+      .flow.h > li { padding: 46px 0 0 0; }
+      .flow.h > li::after { left: 44px; right: -10px; top: 17px; bottom: auto; width: auto; height: 2px; }
+      .flow.h > li:last-child::after { display: none; }
+      .flow.h .step-title { line-height: 1.4; font-size: 1rem; }
+      .flow.h .step-body { margin-top: 4px; font-size: 1rem; line-height: 1.6; }
+    }
+    .use-row { display: grid; gap: 16px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); margin-bottom: 28px; }
+    .use-row .card { padding: 18px; }
+    .use-row .code-block { margin-top: 0; }
+    .use-row h3 { font-size: 1.125rem; margin-bottom: 10px; }
+
+    /* prompts: two columns */
+    .prompts.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 16px; align-items: start; }
+    .prompts.two .prompt-text pre { font-size: 1rem; line-height: 1.65; }
+    .prompts.two > details.more { margin-top: 0; }
+    .prompts.two > details.more .prompts { margin-top: 4px; }
+    .rec-tail { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); margin-top: 16px; align-items: start; }
+    .rec-tail > * { margin-top: 0; }
+
+    /* recommendation cards: three columns, scannable */
+    .rec-list.three { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; align-items: start; }
+    .rec-list.three .rec-card { padding: 18px; }
+    .rec-list.three .rec-card > header { margin-bottom: 12px; gap: 4px 10px; }
+    .rec-list.three .rec-card h3 { font-size: 1.1875rem; line-height: 1.35; }
+    .rec-list.three .rec-card .r-num { font-size: 1.25rem; }
+    .rec-list.three .r-sub { font-size: 1rem; }
+    .r-type { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); }
+    .rec-list.three .verdict { grid-template-columns: minmax(0,1fr); gap: 2px; font-size: 1rem; }
+    .rec-list.three .vtok { justify-self: start; }
+    .rec-list.three .rec-field + .rec-field { margin-top: 14px; }
+    .rec-list.three .rec-field p, .rec-list.three .rec-field li { font-size: 1rem; }
+    .rec-card .rec-field .k { text-transform: none; letter-spacing: 0.02em; }
+    .rec-card .fold-body .rec-field + .rec-field { margin-top: 14px; }
+    .rec-card .fold-body .prompt-text { margin-top: 14px; }
+    .rec-note { font-size: 1rem; color: var(--text-secondary); margin-top: 8px; max-width: 46em; }
+    @media (max-width: 900px) { .rec-list.three { grid-template-columns: minmax(0,1fr); } }
+
+    /* expect: short lists with details */
+    .expect .gist { gap: 6px 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+    .expect .gist li { font-weight: 600; }
+    .expect details.fold ul { margin-top: 4px; }
+
+    @media (max-width: 900px) {
+      .sum-grid { grid-template-columns: minmax(0,1fr); }
+      .duo { grid-template-columns: minmax(0,1fr); }
+    }
+    @media (max-width: 760px) {
+      .fit, .use-row { grid-template-columns: minmax(0,1fr); }
+      .hero.summary { margin-bottom: 56px; }
+      .doc-section { margin-bottom: 64px; }
+    }
+    @media print {
+      details.fold > summary::before, details.more summary::after { content: none; }
+    }
+
+
+    /* ===== v3: short manual + visual section ===== */
+    .doc-section { margin-bottom: 40px; }
+    .hero.summary { margin-bottom: 48px; }
+    .sec-head { margin-bottom: 14px; }
+    .sec-head h2 { font-size: clamp(1.75rem, 1.2vw + 1.4rem, 2.125rem); }
+    .sec-head p { margin-top: 8px; font-size: 1.0625rem; color: var(--text-secondary); }
+    .stop + .stop { margin-top: 36px; }
+    .stop > h3 { font-size: 1.3125rem; margin-bottom: 6px; }
+    .stop > .lead { color: var(--text-secondary); margin-bottom: 16px; max-width: 46em; }
+
+    /* diagrams: wide drawing >= 960px viewport, tall drawing below (keeps SVG text >= 16px) */
+    .viz { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px; }
+    .viz svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .viz .viz-t { display: none; max-width: 440px; margin: 0 auto; }
+    @media (max-width: 959px) {
+      .viz { padding: 16px 0; background: none; border: none; }
+      .viz .viz-w { display: none; }
+      .viz .viz-t { display: block; }
+    }
+    .viz figcaption { margin-top: 14px; font-size: 1rem; line-height: 1.6; color: var(--text-secondary); }
+    .vz-box { fill: var(--bg); stroke: var(--border); stroke-width: 1.5; }
+    .vz-box.acc { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 9%, var(--bg)); }
+    .vz-box.acc2 { stroke: var(--accent-secondary); fill: color-mix(in srgb, var(--accent-secondary) 9%, var(--bg)); }
+    .vz-box.pos { stroke: var(--positive); fill: color-mix(in srgb, var(--positive) 9%, var(--bg)); }
+    .vz-box.neg { stroke: var(--negative); fill: color-mix(in srgb, var(--negative) 7%, var(--bg)); }
+    .vz-box.warnb { stroke: var(--warning); fill: color-mix(in srgb, var(--warning) 7%, var(--bg)); }
+    .vz-box.vz-dashbox { stroke-dasharray: 6 5; }
+    .vz-t, .vz-s, .vz-m { font-family: 'Noto Sans KR', 'Inter', sans-serif; }
+    .vz-t { fill: var(--text); font-size: 19px; font-weight: 700; }
+    .vz-s { fill: var(--text); font-size: 18px; font-weight: 400; }
+    .vz-m { fill: var(--text); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 18px; font-weight: 600; }
+    .viz-t .vz-t { font-size: 18px; }
+    .viz-t .vz-s, .viz-t .vz-m { font-size: 17px; }
+    .vz-s.muted { fill: var(--text-secondary); }
+    .vz-m.acc { fill: var(--accent); } .vz-m.pos { fill: var(--positive); } .vz-m.neg { fill: var(--negative); }
+    .vz-t.acc2t, .vz-s.acc2t { fill: var(--accent-secondary); }
+    .vz-s.warn { fill: var(--warning); }
+    .vz-l { stroke: var(--text-secondary); stroke-width: 2; fill: none; stroke-linejoin: round; }
+    .vz-l.acc { stroke: var(--accent); } .vz-l.acc2 { stroke: var(--accent-secondary); }
+    .vz-l.pos { stroke: var(--positive); } .vz-l.neg { stroke: var(--negative); } .vz-l.warnl { stroke: var(--warning); }
+    .vz-dash { stroke-dasharray: 7 6; }
+    .vz-h { fill: var(--text-secondary); }
+    .vz-h.acc { fill: var(--accent); } .vz-h.acc2 { fill: var(--accent-secondary); }
+    .vz-h.pos { fill: var(--positive); } .vz-h.neg { fill: var(--negative); } .vz-h.warnl { fill: var(--warning); }
+    .vz-tag { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+    .vz-tag.acc { stroke: color-mix(in srgb, var(--accent) 60%, transparent); }
+    .vz-tag.acc2 { stroke: color-mix(in srgb, var(--accent-secondary) 60%, transparent); }
+    @media (max-width: 959px) { .vz-tag { fill: var(--bg); } }
+    .vz-bar.in { fill: var(--text-secondary); }
+    .vz-bar.w { fill: var(--warning); }
+    .vz-bar.r { fill: var(--positive); }
+    .vz-bar.o { fill: var(--accent); }
+    .vz-bar.vz-ghost { opacity: 0.35; }
+
+    /* run + get */
+    .run-grid { display: grid; gap: 16px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; }
+    .run-grid > .card { padding: 18px 20px; }
+    .run-grid h3 { font-size: 1.125rem; margin-bottom: 10px; }
+    .run-grid .code-block { margin-top: 0; }
+    .run-grid table td, .run-grid table th { padding: 8px 12px; }
+    .note { font-size: 1rem; color: var(--text-secondary); margin-top: 10px; line-height: 1.6; }
+    .checks { list-style: none; display: grid; gap: 6px; }
+    .checks li { position: relative; padding-left: 26px; font-size: 1rem; line-height: 1.55; }
+    .checks li::before { content: ""; position: absolute; left: 2px; top: 0.35em; width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--positive); }
+
+    /* report anatomy (token) */
+    .report { list-style: none; counter-reset: rp; display: grid; gap: 8px; }
+    .report li { counter-increment: rp; display: grid; grid-template-columns: 34px minmax(0,1fr) minmax(0,1.2fr); gap: 4px 14px; align-items: baseline; padding: 10px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); }
+    .report li::before { content: counter(rp); font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); font-size: 1.125rem; }
+    .report .q { font-weight: 700; }
+    .report .a { color: var(--text-secondary); }
+    @media (max-width: 760px) {
+      .report li { grid-template-columns: 28px minmax(0,1fr); }
+      .report .a { grid-column: 2; }
+    }
+
+    /* files you get (loop, graph) */
+    .files { list-style: none; display: grid; gap: 6px; }
+    .files li { display: grid; grid-template-columns: 128px minmax(0,1fr); gap: 10px; align-items: baseline; font-size: 1rem; line-height: 1.55; }
+    .files code { justify-self: start; }
+
+    /* fit: yes / no */
+    .fit2 { display: grid; gap: 16px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+    .fit2 .card { padding: 18px 20px; }
+    .fit2 h3 { font-size: 1.125rem; margin-bottom: 10px; }
+    .fit2 ul { list-style: none; display: grid; gap: 8px; }
+    .fit2 li { position: relative; padding-left: 18px; font-size: 1rem; line-height: 1.6; }
+    .fit2 li::before { content: ""; position: absolute; left: 0; top: 0.68em; width: 7px; height: 7px; border-radius: 50%; background: var(--positive); }
+    .fit2 .no li::before { background: var(--negative); }
+    .fit2 .yes { border-top: 3px solid var(--positive); }
+    .fit2 .no { border-top: 3px solid var(--negative); }
+
+    /* compact recommendation cards */
+    .recs { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0,1fr)); align-items: start; }
+    .recs .card { padding: 16px 18px; }
+    .recs h3 { font-size: 1.125rem; line-height: 1.4; margin-bottom: 8px; }
+    .recs .r-type { display: inline-block; margin-bottom: 8px; }
+    .recs .rd { display: grid; gap: 6px; }
+    .recs .rd p { font-size: 1rem; line-height: 1.55; }
+    .recs details.fold { margin-top: 10px; }
+    .recs .prompt-text { margin: 0; }
+    @media (max-width: 900px) { .recs { grid-template-columns: minmax(0,1fr); } }
+
+    /* prompt list inside a fold */
+    .plist { display: grid; gap: 10px; }
+    .plist .prompt-text { margin: 0; }
+    .plist .p-k { font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+    .plist .equiv { margin-top: 4px; font-size: 1rem; color: var(--text-secondary); }
+
+    @media (max-width: 760px) {
+      .run-grid, .fit2 { grid-template-columns: minmax(0,1fr); }
+      .files li { grid-template-columns: minmax(0,1fr); gap: 0; }
+      .stop + .stop { margin-top: 32px; }
+    }
+    @media print {
+      .viz { break-inside: avoid; }
+      .present-btn { display: none !important; }
+    }
+    .run-grid .code-block pre, .run-grid td code, .note code, .files code { font-size: 1rem; }
+    .viz figcaption .gloss, .lead .gloss { font-size: 1em; }
+    .pic-box { font-size: 1rem; }
+    .pic-arrow { font-size: 0.9375rem; }
+    .run-grid .code-block pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (min-width: 761px) { .run-grid td code { font-size: 0.9375rem; white-space: nowrap; } }
+    .report li { padding: 8px 14px; }
+    .recs .rd b { display: inline-block; font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); margin-right: 6px; }
+    .recs .rd p + p { margin-top: 0; }
+    @media (max-width: 760px) { .present-btn { display: none; } }
+    /* presenter window: present.js copies the page styles, so keep the page's p/span color rule from darkening its notes */
+    #pvNotes p:not(.ref) { color: #EDEDED; }
+    #pvDoc { color: #9A9A9A; }
+
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-to-content">본문으로 건너뛰기</a>
+
+  <!-- MENU -->
+  <div class="viz-menu">
+    <button class="viz-menu-toggle" onclick="toggleMenu()" aria-label="메뉴" aria-haspopup="true" aria-controls="vizMenuDropdown">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <div class="viz-menu-dropdown" id="vizMenuDropdown">
+      <button onclick="cycleTheme()"><span id="themeIcon" aria-hidden="true"></span><span id="themeLabel">Dark</span></button>
+      <button onclick="downloadImage()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Download PNG</span></button>
+      <button onclick="window.print()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print / PDF</span></button>
+    </div>
+  </div>
+
+  <header class="site-header" role="banner">
+    <div class="wrap">
+      <span class="brand">Tokens → Loops → Graphs · 스킬 매뉴얼</span>
+      <ul class="manual-switch" aria-label="스킬 매뉴얼 목록">
+        <li><a href="token-efficiency-summary.html">token-efficiency-summary</a></li>
+        <li><a href="loop-spec.html">loop-spec</a></li>
+        <li><a href="graph-plan.html" aria-current="page">graph-plan</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="이 페이지 목차">
+    <div class="wrap">
+      <ol>
+        <li><a href="#flow"><span class="num">1</span>한눈에 보는 설계도</a></li>
+        <li><a href="#use"><span class="num">2</span>실행과 받는 것</a></li>
+        <li><a href="#recommend"><span class="num">3</span>써 볼 만한 일</a></li>
+        <li><a href="#fit"><span class="num">4</span>언제 쓰나</a></li>
+      </ol>
+    </div>
+  </nav>
+
+  <main id="main-content" role="main">
+    <div class="wrap">
+      <section class="hero summary" id="summary" aria-labelledby="page-title" data-stop="이 스킬이 해 주는 일">
+        <p class="eyebrow">스킬 매뉴얼 3 / 3 · Graphs</p>
+        <h1 id="page-title">graph-plan</h1>
+        <p class="lede">일을 에이전트 여러 개로 나눠 돌리는 graph가 정말 필요한지 먼저 판정하고, 필요할 때만 설계도 <code>GRAPH.md</code>를 써 줍니다.</p>
+        <div class="sum-grid">
+          <div class="card">
+            <span class="k">실행</span>
+            <div class="cmd"><pre id="cmd-graph">/graph-plan &lt;과제 한 문장&gt;</pre><button class="copy-btn" data-copy="cmd-graph" type="button">복사</button></div>
+            <p class="sum-note">계획만 합니다. 실행은 사람이 시작합니다.</p>
+          </div>
+          <div class="card">
+            <span class="k">받는 것</span>
+            <div class="pic" role="img" aria-label="질문 4개로 판정합니다. prompt면 여기서 끝, loop면 loop-spec으로 넘기고, graph일 때만 GRAPH.md를 받습니다.">
+              <div class="pic-row"><span class="pic-box acc">질문 4개로 판정</span></div>
+              <div class="pic-arrow">↓ 셋 중 하나</div>
+              <ul class="pic-out short">
+                <li><span class="otok">prompt</span><span>prompt로 충분. 여기서 끝</span></li>
+                <li><span class="otok l">loop</span><span>loop로 충분 → <a href="loop-spec.html">loop-spec</a></span></li>
+                <li><span class="otok g">graph</span><span>설계도 <code>GRAPH.md</code>를 받음</span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="card hero-stat">
+            <span class="k">근거</span>
+            <div class="stat-value">5.5배</div>
+            <p class="stat-label">PR 4개 리뷰는 같은 품질(6/6)에 비용만 5.5배. context를 넘은 감사는 맞는 발견 2.9배. <span class="tag t-exp">[실험]</span> <span class="src"><a href="../README.md#실험-근거">발표 실험</a></span></p>
+          </div>
+        </div>
+        <div class="fit">
+          <p class="y"><strong>이럴 때 쓰세요</strong>에이전트 하나의 context에 안 들어가고, 동시에 따로 돌 갈래가 2개 이상이며, "끝"을 기계가 확인할 수 있는 일</p>
+          <p class="n"><strong>이럴 땐 쓰지 마세요</strong>lint 일괄 수정이나 한 context에 들어가는 리뷰. 대부분은 prompt나 loop로 충분합니다.</p>
+        </div>
+        <aside class="speaker-notes" hidden>
+          <p>세 번째 스킬은 graph-plan입니다. 일을 여러 에이전트로 나눠 돌리는 걸 graph라고 부르는데요, 나누는 건 쉽지만 비용은 잘 안 보입니다. 이 스킬은 먼저 "정말 나눠야 하나"를 판정하고, 나눠야 할 때만 설계도 GRAPH.md를 써 줍니다.</p>
+          <p>PR 네 개를 리뷰시켰더니 품질은 똑같고 비용만 5.5배였습니다. 반대로 에이전트 하나에 다 안 들어가는 감사에서는 맞는 발견을 세 배 가까이 찾았습니다.</p>
+          <p>참고 — PR 4개 6/6 vs 6/6(5.5배), PR 10개 14/14 vs 14/14(2.7배). 감사는 실제 서비스 repo 하나, run당 맞는 발견 32 vs 11, 비용 2.7배, arm마다 2번.</p>
+        </aside>
+      </section>
+
+      <section id="flow" class="doc-section" aria-labelledby="flow-title">
+        <div class="stop" data-stop="판정 사다리">
+          <div class="sec-head">
+            <span class="sec-num">01 · 한눈에 보는 설계도</span>
+            <h2 id="flow-title">질문 넷을 모두 지나야 graph입니다</h2>
+            <p>위에서부터 답하고, 판정이 나면 거기서 멈춥니다. 대부분의 일은 중간에서 멈춥니다.</p>
+          </div>
+          <figure class="viz">
+            <svg class="viz-w" viewBox="0 0 932 406" role="img" aria-label="질문 네 개를 순서대로 답합니다. Q1 사람이 출력을 전부 읽으면 prompt로 충분. Q2 끝을 기계가 확인할 수 없으면 check부터 정의. Q3 한 context에 들어가면 loop. Q4 따로 돌 갈래가 2개 미만이면 loop에 도구를 더. 넷을 모두 지나야 graph이고 GRAPH.md를 씁니다."><rect x="0" y="0" width="400" height="58" rx="10" class="vz-box"/><text x="18" y="35.84" text-anchor="start" class="vz-t">Q1  사람이 출력을 전부 읽나?</text><path d="M 400 29 L 511 29" class="vz-l"/><polygon points="520,29 509,35 509,23" class="vz-h"/><text x="460" y="19" text-anchor="middle" class="vz-s">예</text><rect x="520" y="0" width="412" height="58" rx="10" class="vz-box"/><text x="726" y="23.84" text-anchor="middle" class="vz-t">prompt로 충분</text><text x="726" y="48.48" text-anchor="middle" class="vz-s">graph도 loop도 필요 없음</text><path d="M 200 58 L 200 77" class="vz-l acc2"/><polygon points="200,86 194,75 206,75" class="vz-h acc2"/><text x="214" y="79" text-anchor="start" class="vz-s">아니오</text><rect x="0" y="86" width="400" height="58" rx="10" class="vz-box"/><text x="18" y="121.84" text-anchor="start" class="vz-t">Q2  끝을 기계가 확인하나?</text><path d="M 400 115 L 511 115" class="vz-l warnl"/><polygon points="520,115 509,121 509,109" class="vz-h warnl"/><text x="460" y="105" text-anchor="middle" class="vz-s">아니오</text><rect x="520" y="86" width="412" height="58" rx="10" class="vz-box warnb"/><text x="726" y="109.84" text-anchor="middle" class="vz-t">check부터 정의</text><text x="726" y="134.48" text-anchor="middle" class="vz-s">테스트 · 지표 · 판정 규칙</text><path d="M 200 144 L 200 163" class="vz-l acc2"/><polygon points="200,172 194,161 206,161" class="vz-h acc2"/><text x="214" y="165" text-anchor="start" class="vz-s">예</text><rect x="0" y="172" width="400" height="58" rx="10" class="vz-box"/><text x="18" y="207.84" text-anchor="start" class="vz-t">Q3  한 context에 들어가나?</text><path d="M 400 201 L 511 201" class="vz-l acc"/><polygon points="520,201 509,207 509,195" class="vz-h acc"/><text x="460" y="191" text-anchor="middle" class="vz-s">예</text><rect x="520" y="172" width="412" height="58" rx="10" class="vz-box acc"/><text x="726" y="195.84" text-anchor="middle" class="vz-t">loop로 충분</text><text x="726" y="220.48" text-anchor="middle" class="vz-s">loop-spec으로 · 추측 말고 줄 수로 재기</text><path d="M 200 230 L 200 249" class="vz-l acc2"/><polygon points="200,258 194,247 206,247" class="vz-h acc2"/><text x="214" y="251" text-anchor="start" class="vz-s">아니오</text><rect x="0" y="258" width="400" height="58" rx="10" class="vz-box"/><text x="18" y="293.84" text-anchor="start" class="vz-t">Q4  따로 돌 갈래가 2개 이상?</text><path d="M 400 287 L 511 287" class="vz-l acc"/><polygon points="520,287 509,293 509,281" class="vz-h acc"/><text x="460" y="277" text-anchor="middle" class="vz-s">아니오</text><rect x="520" y="258" width="412" height="58" rx="10" class="vz-box acc"/><text x="726" y="281.84" text-anchor="middle" class="vz-t">loop + 도구 더</text><text x="726" y="306.48" text-anchor="middle" class="vz-s">graph로 나눌 이득 없음</text><path d="M 200 316 L 200 335" class="vz-l acc2"/><polygon points="200,344 194,333 206,333" class="vz-h acc2"/><text x="214" y="337" text-anchor="start" class="vz-s">예</text><rect x="0" y="344" width="400" height="58" rx="10" class="vz-box acc2"/><text x="200" y="379.84" text-anchor="middle" class="vz-t acc2t">graph: GRAPH.md를 씁니다</text><text x="520" y="380" text-anchor="start" class="vz-s muted">넷을 모두 지나야 graph입니다</text></svg><svg class="viz-t" viewBox="0 0 340 724" role="img" aria-label="질문 네 개를 순서대로 답합니다. Q1 사람이 출력을 전부 읽으면 prompt로 충분. Q2 끝을 기계가 확인할 수 없으면 check부터 정의. Q3 한 context에 들어가면 loop. Q4 따로 돌 갈래가 2개 미만이면 loop에 도구를 더. 넷을 모두 지나야 graph이고 GRAPH.md를 씁니다."><rect x="0" y="0" width="340" height="56" rx="10" class="vz-box"/><text x="12" y="34.48" text-anchor="start" class="vz-t">Q1  사람이 출력을 전부 읽나?</text><path d="M 36 56 L 36 157" class="vz-l acc2"/><polygon points="36,166 30,155 42,155" class="vz-h acc2"/><text x="48" y="84" text-anchor="start" class="vz-s">아니오</text><path d="M 232 56 L 232 77" class="vz-l"/><polygon points="232,86 226,75 238,75" class="vz-h"/><text x="244" y="78" text-anchor="start" class="vz-s">예</text><rect x="112" y="86" width="228" height="66" rx="10" class="vz-box"/><text x="226" y="113.48" text-anchor="middle" class="vz-t">prompt로 충분</text><text x="226" y="138.12" text-anchor="middle" class="vz-s">더 나눌 필요 없음</text><rect x="0" y="166" width="340" height="56" rx="10" class="vz-box"/><text x="12" y="200.48" text-anchor="start" class="vz-t">Q2  끝을 기계가 확인하나?</text><path d="M 36 222 L 36 323" class="vz-l acc2"/><polygon points="36,332 30,321 42,321" class="vz-h acc2"/><text x="48" y="250" text-anchor="start" class="vz-s">예</text><path d="M 232 222 L 232 243" class="vz-l warnl"/><polygon points="232,252 226,241 238,241" class="vz-h warnl"/><text x="244" y="244" text-anchor="start" class="vz-s">아니오</text><rect x="112" y="252" width="228" height="66" rx="10" class="vz-box warnb"/><text x="226" y="279.48" text-anchor="middle" class="vz-t">check부터 정의</text><text x="226" y="304.12" text-anchor="middle" class="vz-s">끝을 재는 법부터</text><rect x="0" y="332" width="340" height="56" rx="10" class="vz-box"/><text x="12" y="366.48" text-anchor="start" class="vz-t">Q3  한 context에 들어가나?</text><path d="M 36 388 L 36 489" class="vz-l acc2"/><polygon points="36,498 30,487 42,487" class="vz-h acc2"/><text x="48" y="416" text-anchor="start" class="vz-s">아니오</text><path d="M 232 388 L 232 409" class="vz-l acc"/><polygon points="232,418 226,407 238,407" class="vz-h acc"/><text x="244" y="410" text-anchor="start" class="vz-s">예</text><rect x="112" y="418" width="228" height="66" rx="10" class="vz-box acc"/><text x="226" y="445.48" text-anchor="middle" class="vz-t">loop로 충분</text><text x="226" y="470.12" text-anchor="middle" class="vz-s">추측 말고 재 보기</text><rect x="0" y="498" width="340" height="56" rx="10" class="vz-box"/><text x="12" y="532.48" text-anchor="start" class="vz-t">Q4  따로 돌 갈래가 2개 이상?</text><path d="M 36 554 L 36 655" class="vz-l acc2"/><polygon points="36,664 30,653 42,653" class="vz-h acc2"/><text x="48" y="582" text-anchor="start" class="vz-s">예</text><path d="M 232 554 L 232 575" class="vz-l acc"/><polygon points="232,584 226,573 238,573" class="vz-h acc"/><text x="244" y="576" text-anchor="start" class="vz-s">아니오</text><rect x="112" y="584" width="228" height="66" rx="10" class="vz-box acc"/><text x="226" y="611.48" text-anchor="middle" class="vz-t">loop + 도구 더</text><text x="226" y="636.12" text-anchor="middle" class="vz-s">나눌 이득 없음</text><rect x="0" y="664" width="340" height="56" rx="10" class="vz-box acc2"/><text x="170" y="698.48" text-anchor="middle" class="vz-t acc2t">graph: GRAPH.md를 씁니다</text></svg>
+          </figure>
+          <details class="more">
+            <summary><span><span class="pre">해 보기:</span> 내 과제로 판정해 보기</span></summary>
+            <div class="more-body">
+<div class="tool" id="layer-tool">
+          <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>layer test를 직접 해 보기: 내 과제는 prompt, loop, graph 중 무엇인가</h4>
+          <p class="small muted">SKILL.md Step 1의 질문을 순서대로 답하세요. 앞 질문에서 판정이 나면 뒤 질문은 보지 않습니다.</p>
+          <ol class="list mt-16" style="list-style:none;padding-left:0;display:grid;gap:14px">
+            <li class="lq" data-q="1"><p><strong>Q1.</strong> 결과가 실행되기 전에 사람이 출력을 매번 전부 읽나요?</p><div class="seg mt-16" role="group" aria-label="Q1 답"><button type="button" data-a="yes" aria-pressed="false">예</button><button type="button" data-a="no" aria-pressed="false">아니요</button></div></li>
+            <li class="lq" data-q="2"><p><strong>Q2.</strong> "done"을 기계가 확인할 수 있나요? (query, 테스트, 지표, verdict rule)</p><div class="seg mt-16" role="group" aria-label="Q2 답"><button type="button" data-a="yes" aria-pressed="false">예</button><button type="button" data-a="no" aria-pressed="false">아니요</button></div></li>
+            <li class="lq" data-q="3"><p><strong>Q3.</strong> 한 agent의 context와 한 domain에 들어가나요?</p><p class="small muted">추측하지 말고 재세요. PR 10개, 2,592줄 리뷰도 246k에 들어갔습니다. <span class="tag t-exp">[실험]</span></p><div class="seg mt-16" role="group" aria-label="Q3 답"><button type="button" data-a="yes" aria-pressed="false">예</button><button type="button" data-a="no" aria-pressed="false">아니요</button></div></li>
+            <li class="lq" data-q="4"><p><strong>Q4.</strong> 동시에, 서로 독립적으로 돌 수 있는 branch가 2개 이상인가요?</p><div class="seg mt-16" role="group" aria-label="Q4 답"><button type="button" data-a="yes" aria-pressed="false">예</button><button type="button" data-a="no" aria-pressed="false">아니요</button></div></li>
+          </ol>
+          <div class="result" id="layer-result" aria-live="polite">Q1부터 답하세요.</div>
+          <button type="button" class="fbtn mt-16" id="layer-reset">다시 하기</button>
+        </div>
+            </div>
+          </details>
+          <aside class="speaker-notes" hidden>
+            <p>판정은 질문 네 개로 합니다. 사람이 출력을 전부 읽는다면 프롬프트로 충분합니다. 끝을 기계가 확인할 수 없다면, 나누기 전에 확인 방법부터 정해야 합니다. 에이전트 하나의 context에 다 들어간다면 loop로 충분합니다. 이건 감으로 답하지 말고 줄 수로 재 보세요.</p>
+            <p>마지막으로 동시에 따로 돌 갈래가 두 개 이상이어야 합니다. 네 질문을 다 통과해야 graph입니다.</p>
+            <p>참고 — PR 10개, 2,592줄 리뷰도 246k context에 들어감. "lint 40개 고쳐"는 2/2 loop로 판정, 억지로 나누면 비용 1.47배. Q3이 가장 자주 틀림: 경계선이면 single을 한 번 먼저 돌려 볼 것.</p>
+          </aside>
+        </div>
+
+        <div class="stop" data-stop="설계도">
+          <h3>graph로 판정되면 받는 설계도</h3>
+          <p class="lead">orchestrator<span class="gloss">(일을 나누고 모으는 에이전트)</span>가 갈래마다 worker를 두고, 화살표마다 계약을 붙입니다.</p>
+          <figure class="viz">
+            <svg class="viz-w" viewBox="0 0 932 376" role="img" aria-label="orchestrator 하나가 worker 여러 개와 $0 script node에 일을 나눕니다. 보낼 때는 질문과 facts 경로, 받을 때는 verdict, 근거, 확신도, 남은 질문. verifier가 새 context로 주장을 반박해 보고, 확인된 것만 결과가 됩니다. 한도: 깊이 2 이하, 동시 6개 이하, node마다와 전체 예산, 시간이 넘으면 UNKNOWN."><rect x="0" y="0" width="162" height="254" rx="10" class="vz-box acc2"/><text x="81" y="97.84" text-anchor="middle" class="vz-t">orchestrator</text><text x="81" y="122.48" text-anchor="middle" class="vz-s">하나</text><text x="81" y="146.48" text-anchor="middle" class="vz-s">나누고 모으고</text><text x="81" y="170.48" text-anchor="middle" class="vz-s">검증을 맡김</text><rect x="350" y="0" width="180" height="56" rx="10" class="vz-box acc"/><text x="440" y="22.84" text-anchor="middle" class="vz-t">worker A</text><text x="440" y="47.48" text-anchor="middle" class="vz-s">branch 하나</text><path d="M 162 127 L 342 32.2" class="vz-l acc2"/><polygon points="350,28 343.1,38.4 337.5,27.8" class="vz-h acc2"/><path d="M 530 28 L 590 127" class="vz-l acc"/><rect x="350" y="66" width="180" height="56" rx="10" class="vz-box acc"/><text x="440" y="88.84" text-anchor="middle" class="vz-t">worker B</text><text x="440" y="113.48" text-anchor="middle" class="vz-s">branch 하나</text><path d="M 162 127 L 341.1 95.6" class="vz-l acc2"/><polygon points="350,94 340.2,101.8 338.1,90" class="vz-h acc2"/><path d="M 530 94 L 590 127" class="vz-l acc"/><rect x="350" y="132" width="180" height="56" rx="10" class="vz-box acc"/><text x="440" y="154.84" text-anchor="middle" class="vz-t">worker C</text><text x="440" y="179.48" text-anchor="middle" class="vz-s">싼 모델로 수집</text><path d="M 162 127 L 341.1 158.4" class="vz-l acc2"/><polygon points="350,160 338.1,164 340.2,152.2" class="vz-h acc2"/><path d="M 530 160 L 590 127" class="vz-l acc"/><rect x="350" y="198" width="180" height="56" rx="10" class="vz-box pos vz-dashbox"/><text x="440" y="220.84" text-anchor="middle" class="vz-t">script node</text><text x="440" y="245.48" text-anchor="middle" class="vz-s">$0 · 모델 없이</text><path d="M 162 127 L 342 221.8" class="vz-l acc2"/><polygon points="350,226 337.5,226.2 343.1,215.6" class="vz-h acc2"/><path d="M 530 226 L 590 127" class="vz-l acc"/><rect x="192.18" y="98" width="127.64" height="58" rx="8" class="vz-tag acc2"/><text x="256" y="121.48" text-anchor="middle" class="vz-s">In: 질문</text><text x="256" y="145.48" text-anchor="middle" class="vz-s">+ facts 경로</text><path d="M 590 127 L 761 127" class="vz-l acc"/><polygon points="770,127 759,133 759,121" class="vz-h acc"/><rect x="569.54" y="98" width="180.92" height="58" rx="8" class="vz-tag acc"/><text x="660" y="121.48" text-anchor="middle" class="vz-s">Out: verdict · 근거</text><text x="660" y="145.48" text-anchor="middle" class="vz-s">확신도 · 남은 질문</text><rect x="770" y="77" width="162" height="100" rx="10" class="vz-box acc2"/><text x="851" y="109.84" text-anchor="middle" class="vz-t">verifier</text><text x="851" y="134.48" text-anchor="middle" class="vz-s">새 context로</text><text x="851" y="158.48" text-anchor="middle" class="vz-s">반박해 봄</text><path d="M 851 177 L 851 290 L 81 290 L 81 263" class="vz-l pos"/><polygon points="81,254 87,265 75,265" class="vz-h pos"/><text x="466" y="281" text-anchor="middle" class="vz-s">확인된 것만 결과로 · 시간이 넘으면 UNKNOWN</text><rect x="0" y="310" width="218" height="62" rx="10" class="vz-box warnb vz-dashbox"/><text x="109" y="335.84" text-anchor="middle" class="vz-t">깊이 ≤ 2</text><text x="109" y="360.48" text-anchor="middle" class="vz-s">worker는 다시 안 나눔</text><rect x="238" y="310" width="218" height="62" rx="10" class="vz-box warnb vz-dashbox"/><text x="347" y="335.84" text-anchor="middle" class="vz-t">동시 ≤ 6</text><text x="347" y="360.48" text-anchor="middle" class="vz-s">넘으면 6개씩 차례로</text><rect x="476" y="310" width="218" height="62" rx="10" class="vz-box warnb vz-dashbox"/><text x="585" y="335.84" text-anchor="middle" class="vz-t">예산</text><text x="585" y="360.48" text-anchor="middle" class="vz-s">node마다 · 전체</text><rect x="714" y="310" width="218" height="62" rx="10" class="vz-box warnb vz-dashbox"/><text x="823" y="335.84" text-anchor="middle" class="vz-t">UNKNOWN</text><text x="823" y="360.48" text-anchor="middle" class="vz-s">시간 초과 · 연락 끊김</text></svg><svg class="viz-t" viewBox="0 0 340 888" role="img" aria-label="orchestrator 하나가 worker 여러 개와 $0 script node에 일을 나눕니다. 보낼 때는 질문과 facts 경로, 받을 때는 verdict, 근거, 확신도, 남은 질문. verifier가 새 context로 주장을 반박해 보고, 확인된 것만 결과가 됩니다. 한도: 깊이 2 이하, 동시 6개 이하, node마다와 전체 예산, 시간이 넘으면 UNKNOWN."><rect x="0" y="0" width="340" height="74" rx="10" class="vz-box acc2"/><text x="170" y="31.48" text-anchor="middle" class="vz-t">orchestrator 하나</text><text x="170" y="56.12" text-anchor="middle" class="vz-s">나누고 · 모으고 · 검증을 맡김</text><text x="34" y="104" text-anchor="start" class="vz-s acc2t">In: 질문 + facts 경로</text><rect x="44" y="124" width="256" height="60" rx="10" class="vz-box acc"/><text x="172" y="148.48" text-anchor="middle" class="vz-t">worker A</text><text x="172" y="173.12" text-anchor="middle" class="vz-s">branch 하나</text><path d="M 20 154 L 35 154" class="vz-l acc2"/><polygon points="44,154 33,160 33,148" class="vz-h acc2"/><path d="M 300 154 L 322 154" class="vz-l acc"/><rect x="44" y="196" width="256" height="60" rx="10" class="vz-box acc"/><text x="172" y="220.48" text-anchor="middle" class="vz-t">worker B</text><text x="172" y="245.12" text-anchor="middle" class="vz-s">branch 하나</text><path d="M 20 226 L 35 226" class="vz-l acc2"/><polygon points="44,226 33,232 33,220" class="vz-h acc2"/><path d="M 300 226 L 322 226" class="vz-l acc"/><rect x="44" y="268" width="256" height="60" rx="10" class="vz-box acc"/><text x="172" y="292.48" text-anchor="middle" class="vz-t">worker C</text><text x="172" y="317.12" text-anchor="middle" class="vz-s">싼 모델로 수집</text><path d="M 20 298 L 35 298" class="vz-l acc2"/><polygon points="44,298 33,304 33,292" class="vz-h acc2"/><path d="M 300 298 L 322 298" class="vz-l acc"/><rect x="44" y="340" width="256" height="60" rx="10" class="vz-box pos vz-dashbox"/><text x="172" y="364.48" text-anchor="middle" class="vz-t">script node</text><text x="172" y="389.12" text-anchor="middle" class="vz-s">$0 · 모델 없이</text><path d="M 20 370 L 35 370" class="vz-l acc2"/><polygon points="44,370 33,376 33,364" class="vz-h acc2"/><path d="M 300 370 L 322 370" class="vz-l acc"/><path d="M 20 74 L 20 370" class="vz-l acc2"/><path d="M 322 154 L 322 440 L 170 440 L 170 511" class="vz-l acc"/><polygon points="170,520 164,509 176,509" class="vz-h acc"/><rect x="84.01" y="447" width="171.98" height="58" rx="8" class="vz-tag acc"/><text x="170" y="470.12" text-anchor="middle" class="vz-s">Out: verdict · 근거</text><text x="170" y="494.12" text-anchor="middle" class="vz-s">확신도 · 남은 질문</text><rect x="0" y="520" width="340" height="74" rx="10" class="vz-box acc2"/><text x="170" y="551.48" text-anchor="middle" class="vz-t">verifier</text><text x="170" y="576.12" text-anchor="middle" class="vz-s">새 context로 반박해 봄</text><path d="M 170 594 L 170 625" class="vz-l pos"/><polygon points="170,634 164,623 176,623" class="vz-h pos"/><rect x="0" y="634" width="340" height="74" rx="10" class="vz-box pos"/><text x="170" y="665.48" text-anchor="middle" class="vz-t">결과</text><text x="170" y="690.12" text-anchor="middle" class="vz-s">확인된 것만 · 시간 넘으면 UNKNOWN</text><rect x="0" y="734" width="164" height="70" rx="10" class="vz-box warnb vz-dashbox"/><text x="82" y="763.48" text-anchor="middle" class="vz-t">깊이 ≤ 2</text><text x="82" y="788.12" text-anchor="middle" class="vz-s">worker는 안 나눔</text><rect x="176" y="734" width="164" height="70" rx="10" class="vz-box warnb vz-dashbox"/><text x="258" y="763.48" text-anchor="middle" class="vz-t">동시 ≤ 6</text><text x="258" y="788.12" text-anchor="middle" class="vz-s">6개씩 차례로</text><rect x="0" y="814" width="164" height="70" rx="10" class="vz-box warnb vz-dashbox"/><text x="82" y="843.48" text-anchor="middle" class="vz-t">예산</text><text x="82" y="868.12" text-anchor="middle" class="vz-s">node마다 · 전체</text><rect x="176" y="814" width="164" height="70" rx="10" class="vz-box warnb vz-dashbox"/><text x="258" y="843.48" text-anchor="middle" class="vz-t">UNKNOWN</text><text x="258" y="868.12" text-anchor="middle" class="vz-s">시간 초과 · 끊김</text></svg>
+            <figcaption>가장 쓸모 있던 node는 모델이 아니었습니다. PR 사이 결함을 짚어 낸 것은 $0 script node였습니다. <span class="tag t-exp">[실험]</span></figcaption>
+          </figure>
+          <aside class="speaker-notes" hidden>
+            <p>graph로 판정되면 이런 설계도를 받습니다. orchestrator 하나가 일을 갈래마다 worker에게 나눕니다. 기계로 할 수 있는 일은 모델 없이 도는 script node로 둡니다. 실험에서 가장 쓸모 있던 node가 바로 이 0원짜리 스크립트였습니다.</p>
+            <p>화살표마다 계약이 붙습니다. 보낼 때는 질문과 사실 파일 경로, 받을 때는 판정, 근거, 확신도, 남은 질문. 새 context의 verifier가 주장을 반박해 보고, 확인된 것만 결과가 됩니다. 아래 줄은 한도입니다.</p>
+            <p>참고 — 깊이 ≤ 2(worker는 다시 나누지 않음), 동시 ≤ 6(넘으면 6개씩 차례로), node마다와 전체 예산, 시간 초과·연락 끊김은 UNKNOWN. 모으는 worker는 싼 모델, 검증은 강한 모델. script node는 PR 45쌍 병합본에 기존 테스트를 돌려 결함 3쌍을 표시.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="use" class="doc-section" aria-labelledby="use-title" data-stop="실행과 받는 것">
+        <div class="sec-head">
+          <span class="sec-num">02 · 실행과 받는 것</span>
+          <h2 id="use-title">계획은 스킬이, 실행은 사람이</h2>
+        </div>
+        <div class="run-grid">
+          <div class="card">
+            <h3>설치하고 부르기</h3>
+            <div class="code-block">
+              <span class="code-label">bash · repo 루트에서 · loop-spec도 함께</span>
+              <button class="copy-btn" data-copy="inst-graph" type="button">복사</button>
+              <pre id="inst-graph">mkdir -p ~/.claude/skills
+cp -R graph-plan loop-spec ~/.claude/skills/</pre>
+            </div>
+            <p class="note"><code>/graph-plan &lt;과제&gt;</code>로 부릅니다. "끝"을 무엇으로 확인할지 같이 적으면 Q2가 빨리 풀립니다.</p>
+          </div>
+          <div class="card">
+            <h3>받는 것 <span class="muted" style="font-weight:400;font-size:1rem">· graph일 때 <code>GRAPH.md</code></span></h3>
+            <ul class="files">
+              <li><strong>맨 위</strong><span>판정과 그것을 정한 질문</span></li>
+              <li><code>Nodes</code><span>node마다 모델 · 예산 · 출력 형식 · 끝 확인</span></li>
+              <li><code>Edges</code><span>화살표마다 In · Out · Timeout · 검증</span></li>
+              <li><code>Limits</code><span>깊이 · 동시 개수 · 예산, 실패했을 때 갈 곳</span></li>
+              <li><code>Launch</code><span>새 세션에 붙여 넣을 orchestrator prompt</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="card mt-16">
+          <h3 style="font-size:1.125rem;margin-bottom:10px">띄우기 전에 4가지</h3>
+          <ul class="checks grid-2" style="gap:6px 24px">
+            <li>Q3을 줄 수로 재 봤나. 경계선이면 single을 먼저</li>
+            <li>예산 추정은 방향만 본다</li>
+            <li>스크립트로 할 수 있는 node를 먼저 찾았나</li>
+            <li>비용은 자기 보고가 아니라 기록으로 잰다</li>
+          </ul>
+        </div>
+        <div class="more-list">
+          <details class="more">
+            <summary><span><span class="pre">복사해서 쓰기:</span> 예시 프롬프트 3개</span></summary>
+            <div class="more-body">
+              <div class="plist">
+                <div><span class="p-k">graph가 맞는 일: 병렬 테스트와 실패 설명</span><div class="prompt-text"><button class="copy-btn" data-copy="gp1" type="button">복사</button><pre id="gp1">graph-plan으로 계획만 세워 줘. 생성된 변경에 비교 테스트 5개를 돌리고, 실패가 나오면 하나도 빠짐없이 원인을 설명하고 싶어. 실행은 하지 마.</pre></div></div>
+                <div><span class="p-k">loop로 충분한 일: lint 일괄 수정</span><div class="prompt-text"><button class="copy-btn" data-copy="gp2" type="button">복사</button><pre id="gp2">graph-plan으로 lint 오류 고치는 작업을 subagent 여러 개로 나눠 줘. 파일이 40개야.</pre></div><p class="equiv">→ "graph 아님, loop"라고 답하고 loop-spec으로 넘깁니다.</p></div>
+                <div><span class="p-k">경계선: 여러 PR 리뷰</span><div class="prompt-text"><button class="copy-btn" data-copy="gp3" type="button">복사</button><pre id="gp3">graph-plan으로 열린 PR 10개를 리뷰하는 계획을 세워 줘. 결함을 빠짐없이 찾고 싶어. Q3(한 context에 들어가는지)는 추측하지 말고 전체 변경 줄 수로 재서 판단해 줘. 경계선이면 single로 한 번 먼저 돌려 보자고 해 줘.</pre></div></div>
+              </div>
+            </div>
+          </details>
+        </div>
+        <aside class="speaker-notes" hidden>
+          <p>설치할 때는 loop-spec도 같이 넣으세요. loop로 판정되면 그쪽으로 넘기기 때문입니다. 부를 때는 과제를 한 문장으로 주되, 끝을 무엇으로 확인할지 같이 적으면 판정이 빨라집니다. 계획만 세우고 실행은 하지 않습니다.</p>
+          <p>띄우기 전에 두 가지는 꼭 기억하세요. 스킬이 낸 예산 추정은 방향만 보세요. 그리고 비용은 orchestrator의 자기 보고가 아니라 기록으로 재세요. 실험에서 자기 보고는 실제의 20분의 1 수준이었습니다.</p>
+          <p>참고 — 예산 추정 $34.5 vs 실제 $14.4. orchestrator 자기 보고 0.89M token vs transcript 실측 18.8M. token-efficiency-summary가 main과 subagent 기록을 따로 셈. GRAPH.md에는 공유 상태(facts.md), 실패 경로, mermaid 그림도 들어감.</p>
+        </aside>
+      </section>
+
+      <section id="recommend" class="doc-section" aria-labelledby="recommend-title" data-stop="써 볼 만한 일">
+        <div class="sec-head">
+          <span class="sec-num">03 · 써 볼 만한 일</span>
+          <h2 id="recommend-title">갈래가 따로 돌고, 답을 확인할 수 있는 일 세 가지</h2>
+        </div>
+        <div class="recs">
+          <article class="card">
+            <span class="r-type">Q4에서 graph</span>
+            <h3>여러 경로의 원인 분석</h3>
+            <div class="rd">
+              <p><b>갈래</b> 실행 경로마다 하나, 데이터를 만드는 쪽 하나, 저장하는 쪽 하나</p>
+              <p><b>확인</b> verifier가 원인 주장을 query로 확인하거나 반박</p>
+            </div>
+            <details class="fold"><summary>프롬프트</summary><div class="fold-body"><div class="prompt-text"><button class="copy-btn" data-copy="rec-g1" type="button">복사</button><pre id="rec-g1">graph-plan으로 계획만 세워 줘. 이벤트 테이블의 country 컬럼이 일부 행에서만 비어 있어. 실행 경로별 branch, producer branch, schema/sink branch로 나누고, 각 branch는 EXPLAINS / DOES_NOT_EXPLAIN / UNKNOWN 중 하나와 근거 query를 돌려주게 해 줘. root cause 주장은 fresh context verifier가 query로 확인하게 하고, 실행은 하지 마.</pre></div></div></details>
+          </article>
+          <article class="card">
+            <span class="r-type">Q3 · Q4에서 graph</span>
+            <h3>후보를 나란히 비교하는 조사</h3>
+            <div class="rd">
+              <p><b>갈래</b> 후보마다 worker 하나. 모으는 일은 싼 모델</p>
+              <p><b>확인</b> verifier가 근거 링크가 결론을 받치는지 반박</p>
+            </div>
+            <details class="fold"><summary>프롬프트</summary><div class="fold-body"><div class="prompt-text"><button class="copy-btn" data-copy="rec-g2" type="button">복사</button><pre id="rec-g2">graph-plan으로 우리 서비스에 쓸 job queue 후보 3개(A, B, C)를 비교하는 조사 계획을 세워 줘. 후보마다 worker 하나를 두고, 답은 verdict / evidence links / confidence / open questions 형식으로 받아 줘. verifier가 각 결론을 반박해 보게 하고, 질문끼리 묶여 있으면 나누지 말자고 말해 줘. 실행은 하지 마.</pre></div></div></details>
+          </article>
+          <article class="card">
+            <span class="r-type">Q3 · Q4에서 graph</span>
+            <h3>감사와 대량 리뷰</h3>
+            <div class="rd">
+              <p><b>갈래</b> 표면(인증, 저장소, 외부 API, 로그)마다 하나. secret scan 같은 일은 script node</p>
+              <p><b>확인</b> verifier가 발견 하나하나를 반박. 한 context에 들어가면 single로</p>
+            </div>
+            <details class="fold"><summary>프롬프트</summary><div class="fold-body"><div class="prompt-text"><button class="copy-btn" data-copy="rec-g3" type="button">복사</button><pre id="rec-g3">graph-plan으로 이 repo의 보안·개인정보 감사 계획을 세워 줘. surface(인증, 저장소, 외부 API, 로그)마다 worker 하나, secret scan과 dependency audit은 스크립트 노드로 두고, verifier가 각 finding을 반박해 보게 해 줘. 먼저 전체가 한 context에 들어가는 규모인지 재 보고, 들어가면 single로 하자고 말해 줘. 실행은 하지 마.</pre></div></div></details>
+          </article>
+        </div>
+        <p class="rec-note">규칙을 적용한 예입니다(실험 아님). 큰 기능을 통째로 나누면 갈래끼리 결정이 부딪힙니다. <span class="tag t-pub">[공개]</span> <span class="src"><a href="https://cognition.com/blog/dont-build-multi-agents" rel="noopener">Cognition</a></span></p>
+        <aside class="speaker-notes" hidden>
+          <p>graph를 써 볼 만한 일 세 가지입니다. 실행 경로가 여러 갈래인 원인 분석, 후보를 나란히 비교하는 조사, 그리고 보안 감사나 대량 리뷰처럼 에이전트 하나에 다 안 들어가는 검사입니다. 셋 다 갈래끼리 독립적이고, 각 갈래의 답을 정해진 형식과 verifier로 확인할 수 있습니다.</p>
+          <p>반대로 큰 기능을 통째로 나눠 맡기는 일은 조심하세요. 갈래끼리 서로의 결정을 보지 못해서 합칠 때 부딪힙니다.</p>
+          <p>참고 — 카드는 스킬 규칙을 적용한 예, 그대로 실험한 것 아님. 큰 기능은 API·schema 계약 고정, 모듈마다 테스트, committer 하나가 merge할 때만. 아니면 설계는 single, 구현은 loop.</p>
+        </aside>
+      </section>
+
+
+      <section id="fit" class="doc-section" aria-labelledby="fit-title" data-stop="언제 쓰고 언제 안 쓰나">
+        <div class="sec-head">
+          <span class="sec-num">04 · 언제 쓰나</span>
+          <h2 id="fit-title">나눌 이유가 있을 때만 나눕니다</h2>
+        </div>
+        <div class="fit2">
+          <div class="card yes">
+            <h3>기대할 수 있는 것</h3>
+            <ul>
+              <li>"graph 아님"을 먼저 말해 줍니다. lint 과제는 2/2 loop <span class="tag t-exp">[실험]</span></li>
+              <li>한 context를 넘는 일에서 더 넓게 봅니다. 실제 서비스 repo 하나 감사에서 맞는 발견 run당 32 vs 11 <span class="tag t-exp">[실험]</span></li>
+              <li>계약 · 한도 · verifier가 미리 적힌 설계도</li>
+            </ul>
+          </div>
+          <div class="card no">
+            <h3>기대하면 안 되는 것</h3>
+            <ul>
+              <li>한 context 안에서 더 좋은 품질. PR 리뷰는 같은 품질에 비용 2.7–5.5배 <span class="tag t-exp">[실험]</span></li>
+              <li>정확한 예산. 추정은 방향만 맞습니다.</li>
+              <li>실행. 계획만 세우고, 띄우는 것은 사람입니다.</li>
+            </ul>
+          </div>
+        </div>
+        <details class="more" id="method">
+          <summary><span><span class="pre">근거:</span> 수치를 잰 조건</span></summary>
+          <div class="more-body">
+            <ul class="evidence">
+              <li><span class="tag t-exp">[실험]</span>발표 실험은 통제 실험입니다. 두 쪽 모두 Opus 5.5 xhigh, 같은 clone 커밋, 같은 과제, 바꾼 변수 1개, 셀당 N=2–3. <span class="src"><a href="../README.md#실험-근거">발표 실험</a></span></li>
+              <li><span class="tag t-exp">[실험]</span>감사(데모 3): 결함을 심지 않은 실제 서비스 repo 하나를 읽기 전용으로 single 2번, graph 2번 감사했습니다. 발견을 모아 출처를 가린 채 판정했습니다. single은 API route 121개 중 60–72개만 열어 봤고 graph는 121개를 모두 봤습니다. 발견 1건당 비용은 $1.01 vs $1.09로 비슷했습니다. 발견 내용은 공개하지 않습니다. <span class="src"><a href="../demos/graph.html">graph 데모</a></span></li>
+              <li><span class="tag t-pub">[공개]</span>Anthropic의 multi-agent research 시스템은 내부 eval에서 단일 agent보다 90.2% 높았고, token은 chat의 약 15배를 썼습니다. <span class="src"><a href="https://www.anthropic.com/engineering/multi-agent-research-system" rel="noopener">Anthropic, 2025-06-13</a></span></li>
+            </ul>
+          </div>
+        </details>
+        <aside class="speaker-notes" hidden>
+          <p>정리하면, graph는 일이 에이전트 하나에 안 담기고, 갈래가 동시에 따로 돌 때만 씁니다. 실제 서비스 repo 하나를 감사했을 때 혼자 한 쪽은 route를 절반 정도만 열어 봤고, graph는 전부 봤습니다. 맞는 발견 1건당 비용은 비슷했습니다.</p>
+          <p>하지만 한 context에 들어가는 리뷰에서는 품질이 똑같고 비용만 몇 배 더 들었습니다. 나눌 이유가 있을 때만 나누고, 나누면 계약과 verifier부터 정하세요.</p>
+          <p>참고 — 감사: route 121개 중 single 60–72개, graph 121개. 1건당 graph $1.01 vs single $1.09. 발견 내용은 공개하지 않음(개수·비용만). 리뷰: 2.7–5.5배.</p>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer" role="contentinfo">
+    <div class="wrap">
+      <p><strong>근거 표시.</strong> <span class="tag t-exp">[실험]</span> 발표 실험·데모 측정값 · <span class="tag t-pub">[공개]</span> 공개 자료 · <span class="tag t-des">[설계]</span> 스킬 파일</p>
+      <p><strong>출처.</strong> <code>graph-plan/SKILL.md</code>, <code>references/graph-template.md</code>, <code>references/orchestrator-prompt.md</code>, <a href="../README.md#실험-근거">발표 실험</a>, <a href="../demos/graph.html">graph 데모</a>.</p>
+      <p>비용은 정가 기준 추정이며 구독 청구액이 아닙니다. 2026-10-18 기준.</p>
+
+      <ul class="manual-switch" aria-label="다른 스킬 매뉴얼">
+        <li><a href="token-efficiency-summary.html">token-efficiency-summary</a></li>
+        <li><a href="loop-spec.html">loop-spec</a></li>
+        <li><a href="graph-plan.html" aria-current="page">graph-plan</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    // === Menu ===
+    function toggleMenu() {
+      var dropdown = document.getElementById('vizMenuDropdown');
+      if (dropdown) dropdown.classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.viz-menu')) {
+        var dropdown = document.getElementById('vizMenuDropdown');
+        if (dropdown) dropdown.classList.remove('open');
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        var dropdown = document.getElementById('vizMenuDropdown');
+        if (dropdown) dropdown.classList.remove('open');
+      }
+    });
+
+    // === Theme (class-based, OS detection on first visit) ===
+    var THEME_KEY = 'tlg-manual:theme:v1';
+    var ICON_MOON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    var ICON_SUN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+    var savedTheme = null;
+    try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) { savedTheme = null; }
+    var currentTheme = savedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    function applyTheme(t) {
+      document.documentElement.className = 'theme-' + t;
+      var icon = document.getElementById('themeIcon');
+      var label = document.getElementById('themeLabel');
+      if (icon) icon.innerHTML = t === 'dark' ? ICON_MOON : ICON_SUN;
+      if (label) label.textContent = t === 'dark' ? 'Dark' : 'Light';
+      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+      currentTheme = t;
+      if (typeof onThemeChange === 'function') onThemeChange();
+    }
+    function cycleTheme() { applyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+    function onThemeChange() {}
+    applyTheme(currentTheme);
+
+    // === Scroll Reveal (content visible without JS) ===
+    document.querySelectorAll('[data-reveal]').forEach(function(el) { el.classList.add('reveal'); });
+    var revealObserver = ('IntersectionObserver' in window) ? new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+    }, { threshold: 0.08 }) : null;
+    document.querySelectorAll('.reveal').forEach(function(el) { if (revealObserver) revealObserver.observe(el); else el.classList.add('visible'); });
+
+    // === TOC active state ===
+    var tocLinks = document.querySelectorAll('.toc a');
+    if ('IntersectionObserver' in window) {
+      var tocObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) {
+            tocLinks.forEach(function(a) { a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id); });
+          }
+        });
+      }, { rootMargin: '-30% 0px -60% 0px' });
+      document.querySelectorAll('main section[id]').forEach(function(s) { tocObserver.observe(s); });
+    }
+
+    // === Copy to clipboard ===
+    function copyText(text, btn) {
+      function done() {
+        var old = btn.getAttribute('data-label') || btn.textContent;
+        btn.setAttribute('data-label', old);
+        btn.textContent = '복사됨';
+        btn.classList.add('done');
+        setTimeout(function() { btn.textContent = old; btn.classList.remove('done'); }, 1400);
+      }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta); done();
+      }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+    }
+    document.querySelectorAll('[data-copy]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = document.getElementById(btn.getAttribute('data-copy'));
+        if (target) copyText(target.innerText.replace(/ /g, ' ').trim(), btn);
+      });
+    });
+
+    // === Print: open all details ===
+    window.addEventListener('beforeprint', function() {
+      document.querySelectorAll('details').forEach(function(d) { d.setAttribute('data-was-open', d.open ? '1' : '0'); d.open = true; });
+    });
+    window.addEventListener('afterprint', function() {
+      document.querySelectorAll('details').forEach(function(d) { if (d.getAttribute('data-was-open') === '0') d.open = false; });
+    });
+
+    // === Number Counter (data-count) ===
+    function animateCounters() {
+      document.querySelectorAll('[data-count]').forEach(function(el) {
+        if (el.dataset.counted) return;
+        el.dataset.counted = '1';
+        var target = parseFloat(el.dataset.count), prefix = el.dataset.prefix || '', suffix = el.dataset.suffix || '';
+        var start = performance.now(), duration = 1000;
+        (function tick(now) {
+          var p = Math.min((now - start) / duration, 1), eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = prefix + Math.round(target * eased).toLocaleString() + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        })(start);
+      });
+    }
+    var counterEl = document.querySelector('[data-count]');
+    if (counterEl && 'IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      var cObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) { if (e.isIntersecting) { animateCounters(); cObs.disconnect(); } });
+      }, { threshold: 0.3 });
+      cObs.observe(counterEl);
+    }
+
+    // === Download PNG ===
+    async function downloadImage() {
+      var menu = document.querySelector('.viz-menu');
+      menu.style.display = 'none';
+      try {
+        var url = await htmlToImage.toPng(document.body, { quality: 1, pixelRatio: 2, filter: function(n) { return !n.classList || !n.classList.contains('viz-menu'); } });
+        var a = document.createElement('a'); a.href = url;
+        a.download = document.title.replace(/\s+/g, '-').toLowerCase() + '.png'; a.click();
+      } catch (e) { console.error('Download failed:', e); }
+      menu.style.display = '';
+    }
+
+    // === PAGE SCRIPTS ===
+    // Layer test (SKILL.md Step 1). Answers are checked in order; the first stopping answer decides.
+    var layerAnswers = { 1: null, 2: null, 3: null, 4: null };
+    function layerVerdict() {
+      var a = layerAnswers;
+      if (a[1] === null) return { stop: 0, cls: '', html: 'Q1부터 답하세요.' };
+      if (a[1] === 'yes') return { stop: 1, cls: 'ok', html: '<strong>prompt로 충분합니다 (결정: Q1)</strong>사람이 모든 출력을 읽으니 graph도 loop도 필요 없습니다. 여기서 멈춥니다.' };
+      if (a[2] === null) return { stop: 0, cls: '', html: 'Q2에 답하세요.' };
+      if (a[2] === 'no') return { stop: 2, cls: 'warn', html: '<strong>아직 graph가 없습니다 (결정: Q2)</strong>"done"을 기계가 확인할 수 없습니다. 먼저 check(query, 테스트, 지표, verdict rule)를 정의하세요.' };
+      if (a[3] === null) return { stop: 0, cls: '', html: 'Q3에 답하세요. 추측하지 말고 재 보세요.' };
+      if (a[3] === 'yes') return { stop: 3, cls: 'ok', html: '<strong>loop를 쓰세요 (결정: Q3)</strong>한 agent의 context와 한 domain에 들어갑니다. <a href="loop-spec.html">loop-spec</a>으로 넘깁니다.' };
+      if (a[4] === null) return { stop: 0, cls: '', html: 'Q4에 답하세요.' };
+      if (a[4] === 'no') return { stop: 4, cls: 'ok', html: '<strong>loop에 도구를 더 주세요 (결정: Q4)</strong>동시에 독립적으로 돌 branch가 2개 미만입니다. graph의 이득이 없습니다.' };
+      return { stop: 5, cls: 'no', html: '<strong>graph: GRAPH.md를 씁니다</strong>네 답이 모두 graph를 가리킵니다. 결정한 질문을 GRAPH.md 머리에 적고, 실험처럼 같은 품질에 비용만 더 들 수 있으니 예산을 먼저 정하세요.' };
+    }
+    function renderLayer() {
+      var v = layerVerdict();
+      var res = document.getElementById('layer-result');
+      res.className = 'result' + (v.cls ? ' ' + v.cls : '');
+      res.innerHTML = v.html;
+      document.querySelectorAll('#layer-tool .lq').forEach(function(li) {
+        var q = parseInt(li.getAttribute('data-q'), 10);
+        var dim = v.stop > 0 && v.stop < 5 && q > v.stop;
+        li.style.opacity = dim ? '0.4' : '1';
+        li.querySelectorAll('button').forEach(function(b) {
+          b.disabled = dim;
+          b.setAttribute('aria-pressed', layerAnswers[q] === b.getAttribute('data-a') ? 'true' : 'false');
+        });
+      });
+    }
+    document.querySelectorAll('#layer-tool .lq').forEach(function(li) {
+      var q = parseInt(li.getAttribute('data-q'), 10);
+      li.querySelectorAll('button').forEach(function(b) {
+        b.addEventListener('click', function() {
+          layerAnswers[q] = b.getAttribute('data-a');
+          var v = layerVerdict();
+          if (v.stop > 0 && v.stop < 5) { for (var k = v.stop + 1; k <= 4; k++) layerAnswers[k] = null; }
+          renderLayer();
+        });
+      });
+    });
+    document.getElementById('layer-reset').addEventListener('click', function() {
+      layerAnswers = { 1: null, 2: null, 3: null, 4: null };
+      renderLayer();
+    });
+    renderLayer();
+    // Open a closed <details> when an in-page link points at it or inside it.
+    function openTo(hash) {
+      var el = hash && hash.length > 1 ? document.getElementById(decodeURIComponent(hash.slice(1))) : null;
+      if (!el) return;
+      if (el.tagName === 'DETAILS') el.open = true;
+      for (var d = el.parentElement && el.parentElement.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    }
+    document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+      a.addEventListener('click', function() { openTo(a.getAttribute('href')); });
+    });
+    window.addEventListener('hashchange', function() { openTo(location.hash); });
+    openTo(location.hash);
+
+  </script>
+  <button class="present-btn" type="button">발표 모드 (P)</button>
+  <script>
+/* present.js — presenter mode for long single-page docs (skill manuals, demo result pages).
+   Inline this file verbatim at the end of <body>. No dependencies.
+
+   Markup the page provides:
+     - Stops: elements with [data-stop="짧은 제목"] in document order (the one-screen summary is the first stop).
+     - Notes: inside each stop, <aside class="speaker-notes" hidden><p>말할 것…</p><p>참고 — 말하지 않는 부분</p></aside>
+       Notes never show on the page (hidden + CSS below), on screen or in print.
+     - Optional button: <button class="present-btn" type="button">발표 모드 (P)</button> (wired automatically).
+
+   Reading mode (default): keys and scrolling behave normally.
+   Presenting: press P (or the button). A presenter window opens with the notes; the page you share shows no notes.
+     → Space PageDown: next stop · ← PageUp: previous · Home/End · T: restart timer · Esc on the page: leave presenting.
+     Keys work in both windows; both move together. Manual scrolling on the page updates the current stop. */
+(function () {
+  var stops = Array.prototype.slice.call(document.querySelectorAll('[data-stop]'));
+  if (!stops.length) return;
+  var css = document.createElement('style');
+  css.textContent = '.speaker-notes{display:none !important}[data-stop]{scroll-margin-top:12px}' +
+    '.present-btn{position:fixed;right:16px;bottom:16px;z-index:50;font:600 13px/1 Inter,Pretendard,"Noto Sans KR",sans-serif;' +
+    'padding:9px 12px;border-radius:8px;border:1px solid var(--border,rgba(127,127,127,.35));background:var(--surface,#fff);color:var(--text-secondary,#666);cursor:pointer;opacity:.75}' +
+    '.present-btn:hover{opacity:1}body.presenting .present-btn{display:none}' +
+    '@media print{.present-btn{display:none !important}}';
+  document.head.appendChild(css);
+
+  var cur = 0, win = null, t0 = null, tick = null, presenting = false, lock = 0;
+  function title(i) { var s = stops[i]; return s ? (s.getAttribute('data-stop') || '') : ''; }
+  function notes(i) {
+    var box = stops[i] && stops[i].querySelector('.speaker-notes');
+    return box ? Array.prototype.map.call(box.querySelectorAll('p'), function (p) { return p.textContent.trim(); }).filter(Boolean) : [];
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + pad(s % 60); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function go(i) {
+    if (i < 0 || i >= stops.length) return;
+    cur = i; lock = Date.now();
+    stops[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { history.replaceState(null, '', '#stop-' + (i + 1)); } catch (e) {}
+    update();
+  }
+  // manual scrolling: the stop whose top is nearest above the viewport's upper third becomes current
+  window.addEventListener('scroll', function () {
+    if (!presenting || Date.now() - lock < 900) return;
+    var y = window.innerHeight / 3, best = 0;
+    for (var k = 0; k < stops.length; k++) { if (stops[k].getBoundingClientRect().top <= y) best = k; }
+    if (best !== cur) { cur = best; update(); }
+  }, { passive: true });
+
+  function onKey(e) {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'p' || k === 'P') { e.preventDefault(); openPresenter(); return; }
+    if (!presenting) return;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(stops.length - 1); }
+    else if (k === 't' || k === 'T') { t0 = Date.now(); clock(); }
+    else if (k === 'Escape') { presenting = false; document.body.classList.remove('presenting'); }
+  }
+  document.addEventListener('keydown', onKey);
+  Array.prototype.forEach.call(document.querySelectorAll('.present-btn'), function (b) { b.addEventListener('click', openPresenter); });
+
+  function shell() {
+    var styles = Array.prototype.map.call(document.querySelectorAll('style'), function (st) { return st.textContent; }).join('\n');
+    var links = Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) { return l.outerHTML; }).join('');
+    var pv = 'html,body{height:100%;overflow:hidden}body{margin:0 !important;background:#0A0A0A !important;color:#EDEDED !important;' +
+      'font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",Inter,sans-serif;word-break:keep-all}' +
+      '*,*::before,*::after{animation:none !important;transition:none !important}' +
+      '#pv{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px 22px;height:100%;padding:16px 20px;box-sizing:border-box}' +
+      '#pvTop{grid-column:1 / -1;display:flex;align-items:center;gap:16px;font:700 15px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A}' +
+      '#pvTop b{color:#3b82f6;font-size:17px}#pvClock{margin-left:auto;font:800 26px/1 Inter,sans-serif;color:#EDEDED;font-variant-numeric:tabular-nums}' +
+      '#pvL,#pvR{display:flex;flex-direction:column;gap:10px;min-height:0}' +
+      '.lab{font:700 13px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A;letter-spacing:.03em}' +
+      '#pvTitle{font-size:24px;font-weight:700;line-height:1.3;color:#EDEDED}' +
+      '#pvBox{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:8px;outline:1px solid rgba(255,255,255,.14);background:var(--bg,#fff)}' +
+      '#pvBox > .pvpage{position:absolute;left:0;top:0;width:1280px;transform-origin:0 0;pointer-events:none;padding:16px 24px;box-sizing:border-box;color:var(--text)}' +
+      '#pvNotes{flex:1;min-height:0;overflow:auto;padding-right:6px;font-size:23px;line-height:1.65}' +
+      '#pvNotes p{margin:0 0 14px;color:#EDEDED !important}#pvNotes p.ref{font-size:16px;line-height:1.55;color:#8a8a8a !important;border-top:1px solid rgba(255,255,255,.12);padding-top:10px}' +
+      '#pvNext{font-size:17px;color:#9A9A9A;line-height:1.4}#pvNext b{color:#EDEDED}#pvHelp{font-size:12px;color:#777}';
+    return '<!DOCTYPE html><html lang="ko" class="' + document.documentElement.className + '"' +
+      (document.documentElement.getAttribute('data-theme') ? ' data-theme="' + document.documentElement.getAttribute('data-theme') + '"' : '') +
+      '><head><meta charset="UTF-8"><title>' + esc(document.title) + ' · 발표자 보기</title>' + links +
+      '<style>' + styles + '</style><style>' + pv + '</style></head><body>' +
+      '<div id="pv"><div id="pvTop"><b id="pvNum"></b><span id="pvDoc"></span><span id="pvClock">0:00</span></div>' +
+      '<div id="pvL"><div class="lab">지금 공유 화면의 구간 (미리보기)</div><div id="pvBox"></div></div>' +
+      '<div id="pvR"><div id="pvTitle"></div><div class="lab">스피커 노트 · 회색 “참고”는 말하지 않는 부분</div><div id="pvNotes"></div>' +
+      '<div id="pvNext"></div><div id="pvHelp">→ ← 스페이스: 넘기기 · T: 타이머 다시 시작 · 이 창은 공유하지 마세요</div></div></div></body></html>';
+  }
+  function openPresenter() {
+    presenting = true; document.body.classList.add('presenting');
+    var w = null;
+    try { w = window.open('', 'present-' + location.pathname.split('/').pop(), 'width=1180,height=720'); } catch (e) { w = null; }
+    if (!w) { console.warn('발표자 창을 열지 못했습니다 (팝업 차단?)'); return; }
+    win = w;
+    try {
+      w.document.open(); w.document.write(shell()); w.document.close();
+      w.document.addEventListener('keydown', onKey);
+      w.addEventListener('resize', update);
+    } catch (e) { win = null; return; }
+    if (!t0) t0 = Date.now();
+    if (tick) clearInterval(tick);
+    tick = setInterval(clock, 1000);
+    var h = /^#stop-(\d+)$/.exec(location.hash || '');
+    if (h) cur = Math.min(Math.max(+h[1] - 1, 0), stops.length - 1);
+    update();
+    try { w.focus(); } catch (e) {}
+  }
+  function clock() {
+    if (!win || win.closed) { if (tick) clearInterval(tick); tick = null; win = null; return; }
+    try { win.document.getElementById('pvClock').textContent = fmt((Date.now() - t0) / 1000); } catch (e) {}
+  }
+  function update() {
+    if (!win) return;
+    try {
+      if (win.closed) { win = null; return; }
+      var d = win.document;
+      d.documentElement.className = document.documentElement.className;
+      d.getElementById('pvNum').textContent = (cur + 1) + ' / ' + stops.length;
+      d.getElementById('pvDoc').textContent = document.title;
+      d.getElementById('pvTitle').textContent = title(cur);
+      var box = d.getElementById('pvBox'); box.innerHTML = '';
+      var page = d.createElement('div'); page.className = 'pvpage';
+      var c = stops[cur].cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('.speaker-notes, script'), function (n) { n.remove(); });
+      page.appendChild(c); box.appendChild(page);
+      page.style.transform = 'scale(' + (box.clientWidth / 1280) + ')';
+      var pn = d.getElementById('pvNotes'); pn.innerHTML = '';
+      var ns = notes(cur);
+      if (!ns.length) { var e0 = d.createElement('p'); e0.className = 'ref'; e0.textContent = '이 구간에는 노트가 없습니다.'; pn.appendChild(e0); }
+      ns.forEach(function (t) { var p = d.createElement('p'); p.textContent = t; if (/^참고/.test(t)) p.className = 'ref'; pn.appendChild(p); });
+      pn.scrollTop = 0;
+      d.getElementById('pvNext').innerHTML = cur + 1 < stops.length ? '다음: <b>' + esc(title(cur + 1)) + '</b>' : '마지막 구간입니다.';
+      clock();
+    } catch (e) { win = null; }
+  }
+})();
+
+  </script>
+</body>
+</html>

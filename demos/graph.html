@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph 데모 결과</title>
+  <meta name="description" content="실제 서비스 repo 하나의 보안·privacy 감사를 single과 graph로 두 번씩 돌려 맞는 발견 수, 정밀도, 재현율, 비용을 비교한 결과">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function () { var t = null; try { t = localStorage.getItem('viz-theme'); } catch (e) {}
+  if (t !== 'dark' && t !== 'light') { try { t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { t = 'light'; } }
+  document.documentElement.className = 'theme-' + t; })();</script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html.theme-light {
+  --bg: #FAFAF9; --surface: #FFFFFF; --surface-hover: #F3F3F1; --border: rgba(0,0,0,0.11);
+  --text: #0f172a; --text-secondary: #556070;
+  --accent: #2563eb; --accent-secondary: #7c3aed;
+  --positive: #047857; --negative: #be123c; --warning: #a16207;
+  --code-bg: #f3f3f1; --hl-bg: #eef4ff; --soft: #f4f6fa;
+  --add-bg: rgba(4,120,87,0.10); --del-bg: rgba(190,18,60,0.09);
+  --before: #94a3b8; --single: #d97706; --graph: #2563eb;
+  --sev-high: #be123c; --sev-medium: #ea580c; --sev-low: #ca8a04; --sev-info: #64748b; --sev-bad: #e2e8f0;
+}
+html.theme-dark {
+  --bg: #0A0A0A; --surface: #141414; --surface-hover: #1E1E1E; --border: rgba(255,255,255,0.13);
+  --text: #EDEDED; --text-secondary: #a3a3a3;
+  --accent: #60a5fa; --accent-secondary: #a78bfa;
+  --positive: #34d399; --negative: #fb7185; --warning: #fbbf24;
+  --code-bg: #101010; --hl-bg: #0f1b2e; --soft: #161a22;
+  --add-bg: rgba(52,211,153,0.12); --del-bg: rgba(251,113,133,0.12);
+  --before: #64748b; --single: #f59e0b; --graph: #60a5fa;
+  --sev-high: #fb7185; --sev-medium: #fb923c; --sev-low: #facc15; --sev-info: #94a3b8; --sev-bad: #334155;
+}
+body { font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text);
+  font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+h1, h2, h3, h4 { color: var(--text); letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; }
+h1 { font-size: 2.25rem; font-weight: 800; }
+h2 { font-size: 1.75rem; font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 700; }
+h4 { font-size: 1.125rem; font-weight: 700; }
+p, li, td, th, dd, dt, summary { font-size: 1rem; }
+.muted { color: var(--text-secondary); }
+code, pre { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1rem; }
+code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre code { background: none; padding: 0; }
+a { color: var(--accent); }
+b, strong { font-weight: 700; }
+.num-i { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+main section { margin-bottom: 64px; }
+
+/* ① one-screen summary */
+.hero { min-height: 100vh; max-height: 720px; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 40px 0 32px; margin-bottom: 24px !important; }
+.kicker { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; color: var(--text-secondary); }
+.kicker b { color: var(--text); }
+.hero h1 { max-width: 960px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.stat .label { color: var(--text-secondary); font-weight: 500; }
+.stat .ba { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 2.25rem; line-height: 1.2; margin: 4px 0 2px; white-space: nowrap; }
+.stat .ba .from { color: var(--text-secondary); font-weight: 600; font-size: 1.5rem; }
+.stat .ba .arrow { color: var(--text-secondary); font-weight: 500; font-size: 1.5rem; margin: 0 6px; }
+.stat .ba .vs { color: var(--text-secondary); font-weight: 500; font-size: 1.25rem; margin: 0 6px; }
+.stat .delta { font-weight: 700; }
+.good { color: var(--positive); } .bad { color: var(--negative); } .flat { color: var(--text-secondary); } .warn { color: var(--warning); }
+.do { background: var(--hl-bg); border-left: 4px solid var(--accent); border-radius: 6px; padding: 12px 16px; font-size: 1.0625rem; }
+.do b { color: var(--accent); }
+.tag { display: inline-block; font-size: 1rem; font-weight: 600; padding: 0 8px; border-radius: 999px; border: 1.5px solid currentColor; line-height: 1.5; white-space: nowrap; }
+.tag.rec { color: var(--accent); } .tag.exp { color: var(--positive); } .tag.est { color: var(--warning); }
+
+/* section head */
+.sec-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.sec-num { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); font-size: 1.25rem; }
+.lead { font-size: 1.1875rem; font-weight: 600; margin-bottom: 20px; max-width: 920px; }
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 22px; margin-top: 18px; }
+.terms p { color: var(--text-secondary); border-left: 3px solid var(--border); padding-left: 12px; }
+.terms p b { color: var(--text); }
+.note { color: var(--text-secondary); margin-top: 12px; }
+
+/* flow diagram (HTML boxes + arrows; wraps to a column on phones) */
+.flow { display: flex; align-items: stretch; }
+.flow > .node { flex: 1 1 0; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.flow > .node.wide { flex-grow: 2.4; }
+.flow > .node.hot { border: 2px solid var(--accent); background: var(--hl-bg); }
+.flow > .node.end { border-style: dashed; }
+.flow > .arr { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.flow > .arr svg { width: 22px; height: 22px; }
+.node .k { font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); }
+.node b { display: block; font-size: 1.0625rem; line-height: 1.4; }
+.node .s { color: var(--text-secondary); line-height: 1.5; margin-top: 4px; }
+.node .s code { font-size: 1rem; }
+.node ol, .node ul { margin: 4px 0 0 1.2em; color: var(--text-secondary); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 0 10px; white-space: nowrap; }
+.lanes { display: grid; gap: 12px; }
+.lane { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; }
+.lane .who { font-family: 'Inter', 'Noto Sans KR', sans-serif; font-weight: 800; font-size: 1.125rem; }
+.lane .who span { display: block; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; font-size: 1rem; color: var(--text-secondary); }
+.who.c-single { color: var(--single); } .who.c-graph { color: var(--graph); } .who.c-loop { color: var(--accent-secondary); } .who.c-base { color: var(--text-secondary); }
+.goal { background: var(--soft); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; }
+.goal b { color: var(--accent); }
+.split { display: grid; gap: 6px; margin-top: 6px; }
+.split > div { border-radius: 8px; padding: 6px 10px; border: 1px solid var(--border); }
+.split .ok { background: var(--add-bg); } .split .no { background: var(--del-bg); }
+.split b { display: inline; font-size: 1rem; }
+
+/* ③ results: table + chart side by side */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+thead th { font-weight: 600; color: var(--text-secondary); }
+tbody th { font-weight: 600; }
+td.r, th.r, td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.t td.r b { font-size: 1.0625rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.chart .ttl { font-weight: 700; margin-bottom: 8px; }
+.brow { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; align-items: center; margin: 7px 0; }
+.brow .bl { color: var(--text-secondary); white-space: nowrap; }
+.brow .bv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.track { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--accent); }
+.fill.base { background: var(--before); } .fill.single { background: var(--single); } .fill.loop { background: var(--accent-secondary); } .fill.graph { background: var(--graph); }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.high { background: var(--sev-high); } .seg.medium { background: var(--sev-medium); } .seg.low { background: var(--sev-low); } .seg.info { background: var(--sev-info); }
+.seg.bad { background: repeating-linear-gradient(45deg, var(--sev-bad), var(--sev-bad) 4px, transparent 4px, transparent 8px); outline: 1px solid var(--border); outline-offset: -1px; }
+.track .seg:first-child { border-radius: 6px 0 0 6px; }
+.whisker { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--text); }
+.whisker::before, .whisker::after { content: ''; position: absolute; top: -6px; width: 2px; height: 14px; background: var(--text); }
+.whisker::before { left: 0; } .whisker::after { right: 0; }
+.target { position: absolute; top: -5px; bottom: -5px; border-left: 2px dashed var(--negative); }
+.grp { font-weight: 700; margin-top: 12px; }
+.grp:first-of-type { margin-top: 0; }
+.axis { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) 5.4em; gap: 10px; color: var(--text-secondary); margin-top: 4px; }
+.axis .ticks { position: relative; height: 1.6em; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.axis .ticks span:first-child { transform: none; }
+.axis .ticks span:last-child { transform: translateX(-100%); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-secondary); margin-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.legend i.ring { border-radius: 50%; border: 3px solid var(--negative); }
+.legend i.dash { width: 0; height: 16px; border-left: 2px dashed var(--negative); border-radius: 0; }
+.strip .track { height: 30px; }
+.dot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); }
+.dot.before { background: var(--before); }
+.dot.fail { background: var(--bg); border: 3px solid var(--negative); }
+
+/* ④ why */
+.why-line { font-size: 1.125rem; font-weight: 600; margin-top: 14px; }
+.cov { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 22px; }
+.cov figure { margin: 0; }
+.cov svg { display: block; width: 100%; height: auto; max-width: 170px; margin: 0 auto; }
+.cov figcaption { text-align: center; margin-top: 8px; line-height: 1.45; }
+.cov figcaption b { display: block; font-size: 1.125rem; }
+.cv-on { fill: var(--accent); } .cv-on.s { fill: var(--single); }
+.cv-off { fill: none; stroke: var(--text-secondary); stroke-width: 0.8; stroke-dasharray: 1.6 1.2; opacity: 0.7; }
+.cause { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.cause > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.cause b { display: block; }
+
+/* ⑤ so */
+ol.so { list-style: none; counter-reset: so; display: grid; gap: 10px; }
+ol.so li { counter-increment: so; position: relative; padding: 14px 18px 14px 62px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 1.125rem; }
+ol.so li::before { content: counter(so); position: absolute; left: 18px; top: 13px; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+ol.so li span { display: block; color: var(--text-secondary); font-size: 1rem; margin-top: 2px; }
+.bridge { color: var(--text-secondary); margin-top: 16px; font-style: normal; }
+
+/* ⑥ collapsed records */
+details { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+details > summary { cursor: pointer; font-weight: 600; padding: 12px 16px; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '+'; font-family: 'Inter', sans-serif; font-weight: 800; color: var(--accent); width: 1em; flex: none; }
+details[open] > summary::before { content: '−'; }
+details > .body, details > .dbody { padding: 4px 16px 18px; display: block; }
+.body > * + *, .dbody > * + * { margin-top: 14px; }
+.body h3 { margin-top: 22px; } .body h4 { margin-top: 18px; }
+details details { background: var(--bg); }
+pre, pre.block, pre.code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; line-height: 1.55; overflow-x: auto; }
+pre.block .add { background: var(--add-bg); display: block; } pre.block .del { background: var(--del-bg); display: block; }
+.copy { float: right; font-size: 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 0 10px; cursor: pointer; font-family: inherit; margin-left: 8px; }
+.look { background: var(--soft); border-radius: 10px; padding: 14px 18px; }
+.look h3 { font-size: 1.0625rem; color: var(--accent); margin: 0 0 6px; letter-spacing: 0; }
+.look ol { padding-left: 1.3em; }
+ul.plain, .body ul, .dbody ul { padding-left: 1.2em; display: grid; gap: 6px; }
+.body ol, .dbody ol { padding-left: 1.3em; }
+dl.rc { display: grid; grid-template-columns: 180px 1fr; }
+dl.rc dt, dl.rc dd { padding: 8px 4px; border-bottom: 1px solid var(--border); }
+dl.rc dt { color: var(--text-secondary); }
+.rc dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+.rc dt { color: var(--text-secondary); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+tr.keep td { background: var(--add-bg); }
+.badge { display: inline-block; font-weight: 700; font-size: 1rem; padding: 0 8px; border-radius: 4px; white-space: nowrap; }
+.badge.keep, .badge.done { color: var(--positive); background: var(--add-bg); }
+.badge.reject, .badge.blocked { color: var(--negative); background: var(--del-bg); }
+.badge.cont { color: var(--warning); background: var(--soft); }
+.pass { color: var(--positive); font-weight: 700; } .fail { color: var(--negative); font-weight: 700; }
+.q-yes { color: var(--positive); font-weight: 700; } .q-no { color: var(--negative); font-weight: 700; }
+.decide { background: var(--soft); }
+.shot { width: 100%; border: 1px solid var(--border); border-radius: 8px; display: block; }
+.tl .row { display: grid; grid-template-columns: 9em 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.tl .lab { color: var(--text-secondary); }
+.tl .bar { position: relative; height: 26px; background: var(--surface-hover); border-radius: 6px; }
+.tl .seg { border-radius: 6px; display: flex; align-items: center; padding: 0 8px; color: #fff; white-space: nowrap; overflow: hidden; }
+.tl .axis { display: grid; grid-template-columns: 9em 1fr; gap: 10px; }
+.foot { color: var(--text-secondary); margin-top: 18px; }
+
+/* menu */
+.viz-menu { position: fixed; top: 12px; right: 12px; z-index: 40; }
+.viz-menu-toggle { width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.viz-menu-dropdown { position: absolute; top: 52px; right: 0; min-width: 190px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: none; }
+.viz-menu-dropdown.open { display: block; }
+.viz-menu-dropdown button { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; background: transparent; color: var(--text); font-size: 1rem; font-family: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; }
+.viz-menu-dropdown button:hover { background: var(--surface-hover); }
+.skip-to-content { position: absolute; top: -60px; left: 6px; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 4px; z-index: 60; }
+.skip-to-content:focus { top: 6px; }
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .viz-menu { display: none; }
+  .hero { min-height: auto; }
+  .card, .flow > .node, ol.so li { break-inside: avoid; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@media (max-width: 960px) {
+  .duo { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .stat { padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px; }
+  .stat .ba { font-size: 1.75rem; margin: 0; }
+  .stat .ba .from, .stat .ba .arrow, .stat .ba .vs { font-size: 1.125rem; }
+  .stat .delta { grid-column: 1 / -1; }
+  .flow { flex-direction: column; }
+  .flow > .arr { width: auto; height: 26px; }
+  .flow > .arr svg { transform: rotate(90deg); }
+  .lane { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .lane .who span { display: inline; margin-left: 6px; }
+  .cov { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cause, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td { display: block; width: 100%; }
+  table.stack thead { display: none; }
+  table.stack tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
+  table.stack th, table.stack td { border: 0; padding: 2px 0; text-align: left; white-space: normal; }
+  table.stack td[data-label]::before { content: attr(data-label) " · "; color: var(--text-secondary); }
+  table.stack td[data-k]::before { content: attr(data-k) " "; font-weight: 700; color: var(--text-secondary); }
+}
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px 64px; }
+  .hero { max-height: none; gap: 12px; padding: 60px 0 16px; justify-content: flex-start; }
+  .hero h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.4rem; }
+  .lead { font-size: 1.0625rem; }
+  .do { padding: 8px 12px; font-size: 1rem; }
+  .stat .ba { font-size: 1.5rem; }
+  .brow, .axis { grid-template-columns: 5.2em minmax(0, 1fr) 4.6em; gap: 6px; }
+  .card { padding: 12px; }
+  ol.so li { padding: 12px 14px 12px 54px; font-size: 1.0625rem; }
+  ol.so li::before { left: 14px; }
+  dl.rc { grid-template-columns: 1fr; }
+  .rc dl { grid-template-columns: 1fr; }
+  .tl .row, .tl .axis { grid-template-columns: 6em 1fr; }
+}
+@media (max-width: 375px) { body { overflow-x: hidden; } }
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-to-content">본문으로 건너뛰기</a>
+<div class="viz-menu">
+  <button class="viz-menu-toggle" type="button" onclick="toggleMenu()" aria-label="메뉴"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg></button>
+  <div class="viz-menu-dropdown" id="vizMenuDropdown">
+    <button type="button" onclick="cycleTheme()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="themeLabel">다크 모드</span></button>
+    <button type="button" onclick="downloadImage()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg><span>PNG로 저장</span></button>
+    <button type="button" onclick="window.print()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/></svg><span>인쇄 / PDF</span></button>
+  </div>
+</div>
+<button class="present-btn" type="button">발표 모드 (P)</button>
+<main id="main-content" class="wrap">
+<section id="summary" data-stop="요약" class="hero" aria-label="요약">
+
+<div class="kicker"><b>데모 3 · Graph</b><span class="tag exp">실험</span><span>실제 서비스 repo 하나의 보안·privacy 감사 (읽기 전용, 심어 둔 결함 없음) · single vs graph, 방식마다 2 run · claude-opus-5-5 · effort xhigh</span></div>
+<h1>한 에이전트가 다 읽지 못하는 감사에서, graph는 돈을 2.7배 쓰고 맞는 발견을 2.9배 찾았습니다.</h1>
+<div class="stats">
+  <div class="stat"><div class="label">맞는 발견 (run당) · single → graph</div><div class="ba"><span class="from">11</span><span class="arrow">→</span>32건</div><div class="delta good">2.9배</div></div>
+  <div class="stat"><div class="label">비용 (run당, API 정가) · single → graph</div><div class="ba"><span class="from">$12.0</span><span class="arrow">→</span>$32.4</div><div class="delta bad">2.7배</div></div>
+  <div class="stat"><div class="label">맞는 발견 1건당 비용 · single → graph</div><div class="ba"><span class="from">$1.09</span><span class="arrow">→</span>$1.01</div><div class="delta flat">거의 같음</div></div>
+</div>
+<p class="do"><b>해 볼 것:</b> 일이 에이전트 하나의 context를 넘고, 서로 독립인 조각으로 나뉘고, 조각마다 확인할 방법이 있을 때만 <code>/graph-plan</code>으로 나누세요. 아니면 single이나 loop로 충분합니다.</p>
+
+<aside class="speaker-notes" hidden><p>세 번째 데모는 graph입니다. 실제 서비스 repo 하나를 보안과 privacy 관점에서 감사했습니다. 결함을 일부러 심지 않은 진짜 감사입니다. 같은 과제 문장을 에이전트 하나에게 통째로 맡긴 single과, /graph-plan이 나눈 graph로 각각 두 번씩 돌렸습니다.</p><p>graph는 돈을 2.7배 썼고, 맞는 발견을 2.9배 찾았습니다. run당 11건 대 32건입니다. 그래서 맞는 발견 1건당 비용은 거의 같았습니다. 비싸진 게 아니라 더 많이 일한 겁니다. 왜 그렇게 됐는지가 이 데모의 핵심입니다.</p><p>참고 — 실제 발견의 내용·위치·route 이름은 공개하지 않음. 개수·심각도·정밀도·재현율·비용만. 같은 commit, run당 예산 상한 $60, hook·MCP 끔, 사람 개입 0.</p></aside>
+</section>
+<section id="how" data-stop="어떻게 했나" aria-label="어떻게 했나">
+<div class="sec-head"><span class="sec-num">02</span><h2>어떻게 했나</h2></div><p class="lead">과제 문장, 모델, 예산 상한은 같고 "나눠서 돌려라"만 달랐습니다.</p><div class="lanes"><div class="lane"><div class="who c-single">single<span>에이전트 하나</span></div><div class="flow" role="group" aria-label="single 진행"><div class="node wide"><b>에이전트 하나가 혼자 다 읽음</b><div class="s">표면 7개(인증 · API route 121개 · secret · 외부 전송 · 로그 · DB 정책 · 의존성)</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><b>findings.json</b><div class="s">발견 목록 + 본 범위</div></div></div></div><div class="lane"><div class="who c-graph">graph<span>/graph-plan</span></div><div class="flow" role="group" aria-label="graph 진행"><div class="node "><b>설계도</b><div class="s">GRAPH.md + 공유 사실 facts.md</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><b>orchestrator</b><div class="s">나눠 주고 검사만, 직접 찾지 않음</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node hot"><b>worker 10개</b><div class="s">표면·route 묶음별, 동시 6개까지</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><b>verifier 3개</b><div class="s">medium 이상 후보만 새 context에서 반박</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><b>findings.json</b><div class="s">확인된 것만 합침</div></div></div></div><div class="lane"><div class="who c-base">품질 재기<span>정답지가 없어서</span></div><div class="flow" role="group" aria-label="품질 재는 법"><div class="node "><b>주장 105건</b><div class="s">4 run을 모두 섞음</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><b>고유 53건</b><div class="s">어느 쪽이 찾았는지 지우고 같은 것 합침</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node "><b>blind 판정</b><div class="s">새 context 판정자가 코드를 읽고 가림</div></div><div class="arr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div><div class="node end"><b>맞는 발견 44건</b><div class="s">이것을 정답지로 씀</div></div></div></div></div><div class="terms"><p><b>context</b>: 에이전트가 한 번에 붙들고 읽을 수 있는 분량. 넘치면 앞 내용을 요약(압축)합니다.</p><p><b>worker · verifier</b>: 조각 하나를 맡아 찾는 에이전트, 그리고 남의 주장을 새 context에서 반박해 보는 에이전트.</p><p><b>맞는 발견</b>: 어느 방식이 찾았는지 모르는 판정자가 코드를 읽고 인정한 것.</p></div>
+<aside class="speaker-notes" hidden><p>두 방식은 같은 과제 문장, 같은 모델, 같은 예산 상한을 받았습니다. single은 에이전트 하나가 처음부터 끝까지 혼자 읽습니다. graph는 /graph-plan이 먼저 설계도를 쓰고, 지휘하는 orchestrator가 일을 열 조각으로 나눠 worker에게 동시에 여섯 개씩 맡깁니다. medium 이상 후보는 verifier 셋이 새 context에서 반박해 봅니다.</p><p>정답지가 없는 실제 감사라서 품질은 이렇게 쟀습니다. 네 run이 낸 주장 105건을 섞고, 어느 쪽이 찾았는지 지운 뒤 같은 것끼리 합쳐 53건을 만들었습니다. 새 context의 판정자가 코드를 읽고 44건을 맞는 발견으로 인정했고, 이걸 정답지로 썼습니다.</p><p>참고 — 판정 비용 $24.48(arm 비용에 안 넣음). GPT-6.1-sol이 20건 재판정, 5건 이견(맞음에 안 넣음). 설계 run $2.40·11분은 graph 비용에 미포함(넣으면 run당 약 $33.6). 한계: 두 방식이 모두 놓친 문제는 재지 못함.</p></aside>
+</section>
+<section id="result" data-stop="결과" aria-label="결과">
+<div class="sec-head"><span class="sec-num">03</span><h2>결과</h2></div><p class="lead">graph는 더 많이 찾았고, single은 조금 더 정확했습니다.</p><div class="duo"><div><table class="t"><thead><tr><th>지표 (run당)</th><th class="r">single</th><th class="r">graph</th></tr></thead><tbody><tr><th scope="row">맞는 발견</th><td class="r">11건</td><td class="r"><b>32건</b></td></tr><tr><th scope="row">재현율 (정답지 44건 중 찾은 비율)</th><td class="r">25%</td><td class="r"><b>73%</b></td></tr><tr><th scope="row">정밀도 (주장 중 맞은 비율)</th><td class="r"><b>88%</b></td><td class="r">80%</td></tr><tr><th scope="row">비용 · 시간</th><td class="r">$12.0 · 21분</td><td class="r">$32.4 · 29분</td></tr><tr><th scope="row">맞는 발견 1건당 비용</th><td class="r">$1.09</td><td class="r"><b>$1.01</b></td></tr></tbody></table><p class="note">critical은 0건입니다. 실제 발견의 내용과 위치는 이 페이지에 싣지 않습니다.</p></div><div class="card chart" role="img" aria-label="run별 주장을 심각도로 쌓은 막대. single 두 번은 맞는 발견 10건과 12건, graph 두 번은 33건과 31건. high는 run마다 1–2건, 맞지 않은 주장은 single 2·1건, graph 9·7건"><div class="ttl">run별 주장 (맞음 / 주장)</div><div class="brow"><span class="bl">single · 1</span><div class="track"><div class="seg high" style="left:0.00%;width:2.22%"></div><div class="seg medium" style="left:2.22%;width:11.11%"></div><div class="seg low" style="left:13.33%;width:8.89%"></div><div class="seg bad" style="left:22.22%;width:4.44%"></div></div><span class="bv">10/12</span></div><div class="brow"><span class="bl">single · 2</span><div class="track"><div class="seg high" style="left:0.00%;width:2.22%"></div><div class="seg medium" style="left:2.22%;width:11.11%"></div><div class="seg low" style="left:13.33%;width:11.11%"></div><div class="seg info" style="left:24.44%;width:2.22%"></div><div class="seg bad" style="left:26.67%;width:2.22%"></div></div><span class="bv">12/13</span></div><div class="brow"><span class="bl">graph · 1</span><div class="track"><div class="seg high" style="left:0.00%;width:4.44%"></div><div class="seg medium" style="left:4.44%;width:20.00%"></div><div class="seg low" style="left:24.44%;width:42.22%"></div><div class="seg info" style="left:66.67%;width:6.67%"></div><div class="seg bad" style="left:73.33%;width:20.00%"></div></div><span class="bv">33/42</span></div><div class="brow"><span class="bl">graph · 2</span><div class="track"><div class="seg high" style="left:0.00%;width:4.44%"></div><div class="seg medium" style="left:4.44%;width:22.22%"></div><div class="seg low" style="left:26.67%;width:33.33%"></div><div class="seg info" style="left:60.00%;width:8.89%"></div><div class="seg bad" style="left:68.89%;width:15.56%"></div></div><span class="bv">31/38</span></div><div class="axis" aria-hidden="true"><span></span><div class="ticks"><span style="left:0.00%">0</span><span style="left:33.33%">15</span><span style="left:66.67%">30</span><span style="left:100.00%">45건</span></div><span></span></div><div class="legend"><span><i style="background:var(--sev-high)"></i>high</span><span><i style="background:var(--sev-medium)"></i>medium</span><span><i style="background:var(--sev-low)"></i>low</span><span><i style="background:var(--sev-info)"></i>info</span><span><i class="seg bad" style="position:static;display:inline-block"></i>맞지 않음 · 불분명 · 이견</span></div></div></div>
+<aside class="speaker-notes" hidden><p>표를 보겠습니다. graph는 run당 32건, single은 11건을 찾았습니다. 정답지 44건 중에서 graph는 73%, single은 25%를 찾은 셈입니다. 대신 정밀도, 즉 주장한 것 중 맞은 비율은 single이 88%로 조금 높았습니다. 시간은 병렬로 돌렸는데도 graph가 8분 더 걸렸습니다.</p><p>오른쪽 막대는 run별 주장을 심각도로 쌓은 겁니다. 빗금이 맞지 않은 주장입니다. graph의 늘어난 몫 상당수는 low와 info지만, medium 이상도 run당 6건에서 11~12건으로 늘었습니다. high는 정답지에 2건 있는데, graph는 매번 둘 다, single은 하나씩 찾았습니다.</p><p>참고 — graph만 찾은 맞는 발견 30건 중 22건은 low·info. single만 찾은 것 3건. 병렬인데 더 느린 이유: 두 번째 wave와 verifier가 앞 단계를 기다림. 의존성 표면은 네 run 모두 발견 없음(오프라인).</p></aside>
+</section>
+<section id="why" data-stop="왜 그렇게 나왔나" aria-label="왜 그렇게 나왔나">
+<div class="sec-head"><span class="sec-num">04</span><h2>왜 그렇게 나왔나</h2></div><p class="lead">칸 하나가 API route 파일 하나입니다. single은 "다 봤다"고 적었지만, 직접 연 파일은 절반 남짓이었습니다.</p><div class="cov"><figure><svg viewBox="0 0 110 110" role="img" aria-label="API route 121개 중 72개를 연 그림"><rect class="cv-on s" x="0.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="100.6" width="8.4" height="8.4" rx="1.4"/></svg><figcaption><b>single · 1</b>72 / 121 열어 봄</figcaption></figure><figure><svg viewBox="0 0 110 110" role="img" aria-label="API route 121개 중 60개를 연 그림"><rect class="cv-on s" x="0.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="50.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="60.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="70.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="80.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="90.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="100.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="0.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="10.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="20.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="30.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on s" x="40.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="0.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="10.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="20.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="30.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="40.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="50.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="60.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="70.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="80.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="90.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-off" x="100.6" y="100.6" width="8.4" height="8.4" rx="1.4"/></svg><figcaption><b>single · 2</b>60 / 121 열어 봄</figcaption></figure><figure><svg viewBox="0 0 110 110" role="img" aria-label="API route 121개 중 121개를 연 그림"><rect class="cv-on" x="0.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="100.6" width="8.4" height="8.4" rx="1.4"/></svg><figcaption><b>graph · 1</b>121 / 121</figcaption></figure><figure><svg viewBox="0 0 110 110" role="img" aria-label="API route 121개 중 121개를 연 그림"><rect class="cv-on" x="0.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="0.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="10.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="20.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="30.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="40.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="50.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="60.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="70.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="80.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="90.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="0.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="10.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="20.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="30.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="40.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="50.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="60.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="70.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="80.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="90.6" y="100.6" width="8.4" height="8.4" rx="1.4"/><rect class="cv-on" x="100.6" y="100.6" width="8.4" height="8.4" rx="1.4"/></svg><figcaption><b>graph · 2</b>121 / 121</figcaption></figure></div><div class="cause"><div><b class="c-single" style="color:var(--single)">single: 한 context에 안 담김</b>context가 약 39만 token까지 차서 중간에 한 번 압축됐고, 스스로는 "121개 다 봄"이라고 적었습니다.</div><div><b style="color:var(--graph)">graph: 조각마다 다 읽음</b>node마다 맡은 묶음만 읽어 21만 token 안에서 끝났고, 압축은 없었습니다.</div></div><p class="why-line">나눌 이유가 실제로 있었습니다. 그래서 이번에는 graph가 제 값을 했습니다.</p>
+<aside class="speaker-notes" hidden><p>왜 이렇게 됐는지가 이 그림입니다. 칸 하나가 API route 파일 하나, 모두 121개입니다. single은 두 번 모두 스스로 &#x27;121개 다 봤다&#x27;고 적었지만, 기록을 보면 직접 연 파일은 72개와 60개였습니다. graph는 두 번 모두 121개를 다 열었습니다.</p><p>single은 context가 약 39만 token까지 차서 중간에 한 번 압축됐습니다. 에이전트 하나에 안 담기는 일이었던 겁니다. graph의 node는 각자 맡은 묶음만 읽어서 21만 token 안에서 끝났습니다. 나눌 이유가 실제로 있었고, 그래서 graph가 제 값을 했습니다.</p><p>참고 — single 두 run을 합쳐도 맞는 발견 14건 · $24로 graph 한 run(32건 · $32)에 못 미침. 연 파일 수는 transcript 기준. 이전 PR 리뷰 실험(한 context에 들어가는 일)에서는 두 방식의 품질이 같았음.</p></aside>
+</section>
+<section id="so" data-stop="그래서" aria-label="그래서">
+<div class="sec-head"><span class="sec-num">05</span><h2>그래서</h2></div><ol class="so"><li>나눌 이유가 있을 때만 나눕니다.<span>한 context를 넘고, 조각이 서로 독립이고, 조각마다 확인할 방법이 있을 때입니다.</span></li><li>나누면 계약과 verifier부터 둡니다. 다만 verifier는 받은 것만 지킵니다.<span>medium 이상은 하나도 안 뒤집혔고, 틀린 주장은 모두 verifier를 거치지 않은 low·info였습니다. 어디까지 검증할지도 설계입니다.</span></li><li>판정을 가르는 건 사람이 쓴 과제 문장입니다.<span>loop 데모의 과제를 목표만 한 줄로 주면 graph-plan 판정은 3/3 "graph", 측정 명령과 규칙까지 쓰면 1/1 "loop"였습니다.</span></li></ol><p class="bridge">세 데모 모두, 마지막 판단은 사람이 했습니다: 얼마나 줄일지, 언제 반복할지, 언제 나눌지.</p>
+<aside class="speaker-notes" hidden><p>정리합니다. 나눌 이유가 있을 때만 나눕니다. 일이 한 context를 넘고, 서로 독립인 조각으로 나뉘고, 조각마다 확인할 방법이 있을 때입니다. 나누면 계약과 verifier부터 둡니다. 다만 verifier는 받은 것만 지킵니다. medium 이상 27건은 하나도 안 뒤집혔고, 틀린 주장은 전부 verifier를 거치지 않은 low와 info였습니다.</p><p>마지막으로, 판정을 가르는 건 사람이 쓴 문장입니다. loop 데모의 과제를 목표만 한 줄로 주면 graph-plan은 세 번 모두 graph라고 했고, 측정 명령과 규칙까지 쓴 문장을 주면 loop라고 했습니다. 세 데모 모두, 마지막 판단은 사람이 했습니다.</p><p>참고 — loop 과제 판정: 한 줄 문장 N=3(합 $2.06, 1번은 조건부 graph) · 구체 문장 N=1($1.96). 같은 예산을 쓰게 하는 loop arm은 이번에 돌리지 않음.</p></aside>
+</section>
+<section id="records" data-stop="자세한 기록" aria-label="자세한 기록">
+<div class="sec-head"><span class="sec-num">06</span><h2>자세한 기록</h2></div><p class="lead">프롬프트, 설계도, 지표 전체, 판정 방법은 접어 두었습니다. 실제 발견의 내용은 싣지 않습니다.</p><details><summary>/graph-plan 한 줄과 과제 문장 원문 (영어)</summary><div class="body"><pre class="block">/graph-plan 이 repo의 보안·privacy 감사를 해 줘.
+  · 표면 7개: 인증·권한 / API route 121개 / secret·env / 외부 전송·PII / 로그 / storage·DB 정책 / 의존성
+  · 읽기 전용 · 네트워크와 프로젝트 script 금지 · .env 파일 열지 않기
+  · 결과: findings.json (위치 · 근거 · 심각도 · 확신도 · 확인 방법) + coverage.json
+  + 계획 조건: 모든 node는 Opus 5.5 xhigh · 전체 예산 상한 $60 · 계획만 하고 실행은 하지 않기</pre><p>과제 문장은 single에게 준 것과 글자까지 같습니다. 다른 것은 "graph로 돌려라" 한 줄입니다. skill은 계획만 했고(설계 비용 $2.40, 11분), 실행은 별도 세션에서 했습니다.</p><div class="dbody"><pre class="code">/graph-plan Run a security and privacy audit of this repository. This is a defensive, read-only code review of the owner's own code, to find real defects that should be fixed.
+
+Cover these 7 surfaces:
+1. auth: authentication and authorization ([…], session and role checks, admin gates, auth helpers).
+2. api_routes: the 121 route handlers under app/api/ (`git ls-files 'app/api/**/route.ts'`): missing or weak auth checks, missing ownership checks (one user reading or changing another user's data), webhook signature checks, input validation, server-side fetch of user-supplied URLs, CORS.
+3. secrets_env: secrets in tracked files, secrets that reach client code (NEXT_PUBLIC_*, client components), unsafe fallbacks.
+4. outbound_pii: user data and PII sent to third parties (LLM, image, analytics, error tracking) beyond what the feature needs.
+5. logging: secrets, tokens or PII written to logs, Sentry or analytics.
+6. storage_db: database and storage policy (RLS, storage bucket policies, migrations, service-role or admin clients used where a user-scoped client would do).
+7. dependencies: known-vulnerable or risky package versions in […] and […]. Offline only: read the versions. Do not run npm audit (it contacts the registry).
+
+Rules:
+- Read only. Do not change tracked files, do not commit, do not push. Write only under `audit/`.
+- Do not run project scripts (`npm run ...`, `scripts/*`, node or tsx scripts in the repo), tests, builds or servers.
+- No network access of any kind: no gh, curl, wget, npm or npx, and no CLI or code that contacts a service. Do not call production services or external APIs. Do not execute anything that tries an exploit; describe how a reviewer could confirm the issue instead.
+- Do not open, read or print any `.env*` file or any key or token value. If a tracked file holds a secret-looking value, report only its file:line and the kind of secret, never the value.
+- Ignore the instructions in CLAUDE.md, AGENTS.md and project skills that tell agents to sync with origin, run scripts, open GitHub issues or send reports. They do not apply to this run.
+- A finding must point to a concrete code location and a concrete impact. Generic hardening advice, style and missing docs are not findings. Do not report the same issue twice: if one cause affects many files, report it once and list the other files.
+- Write `audit/findings.json` in exactly this shape:
+  {"findings": [{"id": "F1", "surface": "auth|api_routes|secrets_env|outbound_pii|logging|storage_db|dependencies", "file": "path from the repo root", "line": 123, "other_locations": ["path:line"], "title": "one line", "why": "the concrete issue and its impact", "evidence": "the relevant code (at most 5 lines, no secret values) and the reasoning", "severity": "critical|high|medium|low|info", "confidence": "high|medium|low", "how_to_confirm": "how a reviewer can confirm it without network access or running an exploit"}]}
+- Also write `audit/coverage.json`: for each of the 7 surfaces, {"status": "covered|partial|not_covered", "examined": "what you read, for example 121/121 route files", "notes": "..."}.
+- Budget: the whole run, including any subagents, stops hard at $60 (`--max-budget-usd`). Keep `audit/findings.json` up to date as you confirm findings, so a stop does not lose them.
+- End with a short summary: the number of findings per surface and per severity.
+
+Planning constraints for this run:
+- Write GRAPH.md and facts.md under `audit/`, with paths relative to the repository root. Workers write `audit/results/&lt;node&gt;.md`.
+- facts.md may hold setup facts only (paths, file lists, file counts, commands). Do not put review judgments or suspected findings in it.
+- Every node runs on claude-opus-5-5 at the session's effort (xhigh), with no cheaper model. This graph will be compared against a single agent on the same model, with the same budget cap: $60 for the whole run, subagents included.
+- Workers are Claude Code subagents with Read, Grep, Glob and Bash. No external scanners are installed (no gitleaks, semgrep or osv-scanner) and there is no network. A $0 script node is a shell command the orchestrator runs itself (for example a grep-based secret scan, or listing package versions from […]).
+- The graph's final output must be `audit/findings.json` and `audit/coverage.json`, exactly as the task specifies.
+- Plan only. Do not launch the graph. Do not audit the code yourself beyond what you need to size the branches (file counts, directory layout).
+
+Non-interactive run: nobody can answer questions. Where you would ask, state your assumption and continue.</pre></div></div></details><details><summary>GRAPH.md 공개용 축약본 · orchestrator prompt · facts.md 형식 (설계만, 실제 발견 없음)</summary><div class="body"><div class="dbody">
+    <div class="look"><h3>여기서 볼 세 줄</h3><ol><li>worker 10개는 표면과 route 묶음으로 나뉩니다. 서로 상태를 공유하지 않습니다.</li><li>medium 이상 후보만 verifier로 갑니다. low · info는 기계 검사만 하고 바로 합칩니다.</li><li>누적 비용 gate: $40 새 worker 금지 · $52 새 verifier 금지 · $56 즉시 마무리.</li></ol></div>
+    <pre class="code"># GRAPH: 실제 서비스 repo 보안·privacy 감사 (읽기 전용)
+
+목표: 7개 표면(auth · api_routes · secrets_env · outbound_pii · logging · storage_db · dependencies)에서
+코드 위치와 구체적 영향이 있는 실제 결함을 찾아 findings.json과 coverage.json에 쓴다.
+
+Layer 판정: graph (질문 3이 결정)
+1. 사람이 모든 출력을 먼저 읽는가? 아니오. orchestrator가 사람 없이 중복 제거·검증·병합을 한다.
+2. 기계가 done을 검사할 수 있는가? 예. schema 검사, file:line 존재 검사, route 121/121 대조, verifier 판정 확인.
+3. 한 context, 한 domain에 들어가는가? 아니오 (결정). route handler만 약 8,000줄이고 각 route를 서비스 코드로 따라가야 한다.
+4. 독립 branch가 2개 이상인가? 예. 10개 branch가 상태를 공유하지 않는다.
+
+## Node (모두 claude-opus-5-5, xhigh)
+| Node | 역할 | 예산(soft) | 출력 |
+|---|---|---|---|
+| orchestrator | 계획 · script node 실행 · spawn · 기계 검사 · 중복 제거 · 병합 | $5 | findings.json, coverage.json, ledger.md |
+| S0–S7 (script, $0) | 검사 도구 준비 · secret 모양 위치 · 의존성 버전 표 · route method 목록 · client env 이름 · 로그 호출 위치 · raw SQL 위치 · 외부 호출 위치 (file:line만, 값 없음) | $0 | scan/*.txt |
+| auth-core | 인증 핵심(세션 · 관리자 판정 · 서비스 간 인증) | $5 | results/auth-core.md |
+| agent-access | 에이전트 토큰 · OAuth · 도구 권한 | $6 | results/agent-access.md |
+| actions-pages | server action · 동적 page · layout | $4.5 | results/actions-pages.md |
+| routes-1 · routes-2 · routes-3 | API route 30 · 33 · 37개씩 route마다 인증 · 소유권 검사 (나머지 21개는 auth-core 15 · agent-access 6) | $5씩 | results/routes-N.md |
+| egress-pii | 외부(LLM · 이미지 · 메시징 · telemetry)로 나가는 사용자 데이터 | $4.5 | results/egress-pii.md |
+| logging | 로그 · 에러 추적에 남는 secret · token · PII | $3.5 | results/logging.md |
+| data-secrets | storage · DB 정책 + secret · env | $4 | results/data-secrets.md |
+| deps | 의존성 버전 (오프라인, 모델 지식만) | $2 | results/deps.md |
+| v-auth · v-routes · v-data | medium 이상 후보를 새 context에서 반박 | $2.5씩 | results/v-*.md |
+
+## Edge 계약
+| From → To | 실어 보내는 것 | 반환 | Timeout | 부모의 검증 |
+|---|---|---|---|---|
+| orchestrator → worker | 공통 계약 + 질문 + facts.md 경로 + scan 파일 경로 | status · coverage 표 · 후보 JSON · 열린 질문 | 15–30분 | check.py: JSON · enum · file:line 존재 · evidence ≤ 5줄 · secret 패턴 없음 · 배정 파일 전부 coverage 행 |
+| orchestrator → verifier | 중복 제거한 medium 이상 후보만 (worker 서술은 안 보냄) | 후보마다 confirmed / refuted / adjusted | 20분 | 입력 cid = 출력 cid, refuted는 반증 위치가 실제로 있음 |
+| verifier → orchestrator | 판정 | confirmed · adjusted만 findings.json에 추가 | — | 추가할 때마다 check.py final |
+
+## 공유 state
+- facts.md: append-only, 한 줄에 사실 하나와 출처 명령. 설정 사실만(경로 · 파일 목록 · 개수 · 명령). 판단·의심 금지.
+- results/&lt;node&gt;.md: 파일마다 writer 하나. findings.json · coverage.json: orchestrator만 쓴다.
+
+## 한도
+- 깊이 2(orchestrator → worker · verifier). worker는 spawn할 수 없다. 동시에 도는 child 6개 이하 (6개 → 남은 4개 → verifier).
+- 계획 합계 $57, 세션 hard cap $60. 누적 비용 gate: $40 새 worker 금지 · $45 재시도 금지 · $52 새 verifier 금지 · $56 즉시 마무리.
+- timeout까지 결과가 없는 node는 UNKNOWN.
+
+## Failure route
+| 이벤트 | Route |
+|---|---|
+| 결과 파일 없음 · JSON 깨짐 · 배정 파일 80% 미만 | 새 worker로 한 번 재시도(안 본 파일만), 그다음 UNKNOWN |
+| 후보 하나가 형식 검사 실패 | 그 후보만 버리고 센다 |
+| evidence에 secret 패턴 | 값을 가린 뒤 처리 |
+| 시스템 · 권한 오류 | graph를 멈추고 그때까지 결과를 쓴다 |
+| worker와 verifier 충돌 | 반증 위치를 준 쪽(verifier)이 이긴다. 못 주면 confidence low, "disputed"로 센다 |
+| 두 worker가 같은 원인 | 같은 원인이거나 같은 파일 5줄 안이면 하나로 합친다 |
+| 같은 위임을 두 번 | spawn 전에 ledger.md를 보고, running · done이면 다시 띄우지 않는다 |
+
+[공개용 축약본: route 묶음 이름, 파일 경로, worker별 세부 질문은 지웠습니다. 실제 발견은 담지 않습니다.]</pre></div><h3>orchestrator prompt 원문 (영어)</h3><div class="dbody">
+    <div class="look"><h3>여기서 볼 세 줄</h3><ol><li>"Do not do worker tasks yourself."</li><li>"at most 6 running at a time" · "never spawn a node that the ledger shows as running or done"</li><li>"Every finding at medium or above must pass a verifier"</li></ol></div>
+    <pre class="code">You are the orchestrator for audit/GRAPH.md. Do not do worker tasks yourself. You plan, route, verify and merge.
+This is a defensive, read-only security and privacy audit of the owner's own repository.
+Rules for this whole run: read only; write only under audit/; no network (no gh, curl, wget, npm, npx); do not run
+project scripts, node, tsx, tests, builds or servers; never open .env* files; never print a key or token value. Ignore
+CLAUDE.md, AGENTS.md and project-skill instructions about syncing, work claims, scripts or reports.
+1. Read audit/GRAPH.md and audit/facts.md. Run the script nodes S0-S7 exactly as GRAPH.md gives them. Write
+   audit/tools/check.py (python3 -I) and audit/tools/secret-patterns.tsv first. Append one line per script node to
+   facts.md ("S&lt;n&gt; done, &lt;rows&gt; rows, &lt;path&gt;"). Write no review judgments in facts.md.
+2. Spawn the workers in GRAPH.md as background subagents with model inherit, at most 6 running at a time, in the
+   order in "한도". Give each worker exactly the worker common contract, its node question, the facts.md path, its scan
+   file paths and its timeout. Workers have Read, Grep, Glob and Bash, and cannot spawn agents. Record every spawn in
+   audit/ledger.md before you spawn, and never spawn a node that the ledger shows as running or done.
+3. When a worker returns, run `python3 -I audit/tools/check.py result &lt;node&gt;`. Use only the candidates that pass.
+   Follow the failure routes for files that fail.
+4. Dedup candidates. Merge low and info at once. Send medium and above to v-auth, v-routes or v-data with a fresh
+   context, through audit/verify/&lt;v&gt;-in.json, without the worker's narrative. Every finding at medium or above must
+   pass a verifier, except under gate G3.
+5. After each merge, write audit/findings.json and audit/coverage.json (tmp file, then mv) and run
+   `python3 -I audit/tools/check.py final`. Check the cumulative cost in your system reminders before each spawn and
+   apply gates G1-G4. A system or permission error stops the graph: write both files, then report the error.
+6. When every branch is resolved or UNKNOWN, run check.py final and `git status --porcelain | grep -v '^?? audit/'`
+   (must be empty). Then print a short summary: the number of findings per surface and per severity, the UNKNOWN
+   branches, refuted and disputed counts, and the total cost and time used.</pre></div><h3>facts.md 형식과 예시 한 줄</h3><div class="dbody"><pre class="code"># facts.md: setup facts for GRAPH.md
+규칙: append-only · writer는 orchestrator 하나 · 한 줄에 사실 하나와 출처 명령
+설정 사실만: 경로 · 파일 목록 · 개수 · 명령. 리뷰 판단과 의심 finding은 쓰지 않는다.
+
+## Repository        (커밋 · 파일 수 · route 수 · 도구 유무)
+## Commands          (허용 명령 · 금지 명령 · secret을 찍지 않는 grep 방법)
+## Auth helpers      (helper 이름과 위치만)
+## Branch file lists (worker마다 맡은 파일 목록)
+## Scan outputs      (script node가 실행 때 덧붙임: "S&lt;n&gt; done, &lt;행 수&gt; rows, &lt;경로&gt;")
+
+예시) - Tracked files: 4416. Source: `git ls-files | wc -l`</pre></div></div></details><details><summary>품질을 잰 방법 · 모든 지표 (run별) · 조건</summary><div class="body"><div class="dbody">
+    <p>1. 4번의 run이 낸 주장 105건을 섞고, 어느 arm인지 지운 뒤, 같은 위치 + 같은 문제를 하나로 합쳤습니다 → 고유 53건.</p>
+    <p>2. 고유 1건마다 새 context 판정자(Opus 5.5 xhigh, 읽기 도구만)가 코드를 읽고 valid · invalid · unclear와 심각도를 매겼습니다. 판정자는 어느 arm이 찾았는지 모릅니다. 판정 비용 $24.48.</p>
+    <p>3. GPT-6.1-sol(xhigh, 읽기 전용)이 20건을 다시 판정했습니다: 무효 · 불명 전부, high 전부, 나머지 표본. 같은 판정 15건. 다른 판정은 "이견"으로 따로 세고 유효에 넣지 않았습니다. 심각도는 판정자 기준이며, GPT는 판정자보다 높게 본 경우가 있었습니다(1건은 low가 아니라 critical).</p>
+    <p>4. 결과: 유효 44 · 무효 3 · 불명 1 · 이견 5. 유효 중 high 2 · medium 12 · low 26 · info 4.</p>
+  </div><h3>모든 지표 (run별)</h3><div class="dbody">
+    <table class="stack"><thead><tr><th>지표</th><th>single-1</th><th>single-2</th><th>graph-1</th><th>graph-2</th></tr></thead><tbody><tr><th scope="row">주장한 발견</th><td data-label="single-1">12</td><td data-label="single-2">13</td><td data-label="graph-1">42</td><td data-label="graph-2">38</td></tr><tr><th scope="row">유효 (고유, 판정자 기준)</th><td data-label="single-1">10</td><td data-label="single-2">12</td><td data-label="graph-1">33</td><td data-label="graph-2">31</td></tr><tr><th scope="row">정밀도 (유효 주장 / 전체 주장)</th><td data-label="single-1">83%</td><td data-label="single-2">92%</td><td data-label="graph-1">79%</td><td data-label="graph-2">82%</td></tr><tr><th scope="row">recall (모은 유효 44건 중)</th><td data-label="single-1">23%</td><td data-label="single-2">27%</td><td data-label="graph-1">75%</td><td data-label="graph-2">70%</td></tr><tr><th scope="row">유효 high · medium · low · info</th><td data-label="single-1">1 · 5 · 4 · 0</td><td data-label="single-2">1 · 5 · 5 · 1</td><td data-label="graph-1">2 · 9 · 19 · 3</td><td data-label="graph-2">2 · 10 · 15 · 4</td></tr><tr><th scope="row">무효 · 불명 · 이견 (고유)</th><td data-label="single-1">1 · 1</td><td data-label="single-2">0 · 1</td><td data-label="graph-1">3 · 6</td><td data-label="graph-2">3 · 4</td></tr><tr><th scope="row">유효 발견이 나온 표면 (7개 중)</th><td data-label="single-1">6</td><td data-label="single-2">6</td><td data-label="graph-1">6</td><td data-label="graph-2">6</td></tr><tr><th scope="row">스스로 보고한 coverage: 봄 · 일부</th><td data-label="single-1">6 · 1</td><td data-label="single-2">5 · 2</td><td data-label="graph-1">7 · 0</td><td data-label="graph-2">7 · 0</td></tr><tr><th scope="row">API route 파일을 연 수 (transcript)</th><td data-label="single-1">72 / 121</td><td data-label="single-2">60 / 121</td><td data-label="graph-1">121 / 121</td><td data-label="graph-2">121 / 121</td></tr><tr><th scope="row">비용 (API 정가)</th><td data-label="single-1">$11.92</td><td data-label="single-2">$12.05</td><td data-label="graph-1">$31.94</td><td data-label="graph-2">$32.84</td></tr><tr><th scope="row">token: 입력</th><td data-label="single-1">2,350</td><td data-label="single-2">2,677</td><td data-label="graph-1">1,036</td><td data-label="graph-2">1,108</td></tr><tr><th scope="row">token: cache 쓰기 5분 · 1시간</th><td data-label="single-1">0 · 443k</td><td data-label="single-2">0 · 437k</td><td data-label="graph-1">1.8M · 196k</td><td data-label="graph-2">1.8M · 198k</td></tr><tr><th scope="row">token: cache 읽기</th><td data-label="single-1">33.2M</td><td data-label="single-2">32.0M</td><td data-label="graph-1">51.3M</td><td data-label="graph-2">54.1M</td></tr><tr><th scope="row">token: 출력</th><td data-label="single-1">87k</td><td data-label="single-2">108k</td><td data-label="graph-1">562k</td><td data-label="graph-2">572k</td></tr><tr><th scope="row">벽시계 시간</th><td data-label="single-1">21분</td><td data-label="single-2">22분</td><td data-label="graph-1">28분</td><td data-label="graph-2">30분</td></tr><tr><th scope="row">모델 호출 · subagent</th><td data-label="single-1">143 · 0</td><td data-label="single-2">130 · 0</td><td data-label="graph-1">518 · 13</td><td data-label="graph-2">554 · 13</td></tr><tr><th scope="row">가장 큰 context · 압축</th><td data-label="single-1">390k · 1회</td><td data-label="single-2">388k · 1회</td><td data-label="graph-1">node마다 ≤ 205k · 0회</td><td data-label="graph-2">node마다 ≤ 205k · 0회</td></tr><tr><th scope="row">verifier: 확인 · 수정 · 반박</th><td data-label="single-1">-</td><td data-label="single-2">-</td><td data-label="graph-1">12 · 1 · 0</td><td data-label="graph-2">10 · 4 · 0</td></tr><tr><th scope="row">유효 1건당 비용</th><td data-label="single-1">$1.19</td><td data-label="single-2">$1.00</td><td data-label="graph-1">$0.97</td><td data-label="graph-2">$1.06</td></tr></tbody></table>
+    <p class="muted">이 arm만 찾은 유효 발견: single 3건, graph 30건. 두 arm이 함께 찾은 유효 발견 11건. 의존성 표면은 네 run 모두 유효 발견이 없었습니다(오프라인, 모델 지식만).</p>
+  </div><h3>조건</h3><p class="foot">single × 2, graph × 2 · 모두 claude-opus-5-5, effort xhigh(subagent도 강제) · 같은 commit의 읽기 전용 clone · 같은 과제 문장 · run당 예산 상한 $60 · hook과 MCP 끔 · 네트워크 CLI는 막는 stub로 대체 · 사람 개입 0회. single과 graph를 두 개씩 동시에 돌려, 벽시계 시간은 참고값입니다. 비용은 API 정가(100만 token당 입력 $4 · cache 쓰기 5분 $5 · 1시간 $8 · cache 읽기 $0.20 · 출력 $20)입니다. 실제 발견의 내용, 파일 위치, route 이름은 싣지 않고 개수와 심각도 분포만 싣습니다.</p></div></details><details><summary>시간 순서 (graph-1)와 node별 호출 · token · 비용</summary><div class="body"><div class="dbody">
+    <div class="tl" role="img" aria-label="graph-1 시간 순서: script 단계, 1차 wave, 2차 wave, verifier 단계">
+      <div class="row"><span class="lab">script · 준비</span><div class="bar"><div class="seg" style="left:0;width:14.4%;background:var(--single)">4분</div></div></div>
+      <div class="row"><span class="lab">1차 wave 6개</span><div class="bar"><div class="seg" style="left:14.4%;width:32.4%;background:var(--graph)">4–13분</div></div></div>
+      <div class="row"><span class="lab">2차 wave 4개</span><div class="bar"><div class="seg" style="left:37.1%;width:39.5%;background:var(--graph)">10–22분</div></div></div>
+      <div class="row"><span class="lab">verifier 3개</span><div class="bar"><div class="seg" style="left:50.9%;width:46.0%;background:var(--accent-secondary)">14–27분</div></div></div>
+      <div class="axis"><span></span><span>0분 ─ 끝 28분 (graph-2는 30분, 같은 모양)</span></div>
+    </div>
+    <p>verifier는 그 묶음의 worker가 다 끝나야 시작합니다. 그래서 마지막 묶음의 verifier가 끝날 때까지 기다렸습니다.</p>
+    <table class="stack"><thead><tr><th>node</th><th>역할</th><th class="n">호출</th><th class="n">token</th><th class="n">비용</th></tr></thead><tbody><tr><th scope="row">orchestrator</th><td data-label="역할">계획 · script 8개 · 분배 · check.py · 중복 제거 · 병합</td><td data-label="호출" class="n">66</td><td data-label="token" class="n">8.7M</td><td data-label="비용" class="n">$5.01</td></tr><tr><th scope="row">auth-core</th><td data-label="역할">세션 · 관리자 판정 · 서비스 간 인증</td><td data-label="호출" class="n">33</td><td data-label="token" class="n">3.3M</td><td data-label="비용" class="n">$2.28</td></tr><tr><th scope="row">agent-access</th><td data-label="역할">에이전트 토큰 · OAuth · 도구 권한</td><td data-label="호출" class="n">38</td><td data-label="token" class="n">4.9M</td><td data-label="비용" class="n">$2.87</td></tr><tr><th scope="row">actions-pages</th><td data-label="역할">server action · 동적 page</td><td data-label="호출" class="n">53</td><td data-label="token" class="n">5.5M</td><td data-label="비용" class="n">$2.54</td></tr><tr><th scope="row">routes-1</th><td data-label="역할">API route 묶음 1</td><td data-label="호출" class="n">46</td><td data-label="token" class="n">5.1M</td><td data-label="비용" class="n">$2.60</td></tr><tr><th scope="row">routes-2</th><td data-label="역할">API route 묶음 2</td><td data-label="호출" class="n">32</td><td data-label="token" class="n">3.1M</td><td data-label="비용" class="n">$1.97</td></tr><tr><th scope="row">routes-3</th><td data-label="역할">API route 묶음 3</td><td data-label="호출" class="n">42</td><td data-label="token" class="n">4.0M</td><td data-label="비용" class="n">$2.08</td></tr><tr><th scope="row">egress-pii</th><td data-label="역할">외부로 나가는 사용자 데이터</td><td data-label="호출" class="n">45</td><td data-label="token" class="n">5.7M</td><td data-label="비용" class="n">$2.69</td></tr><tr><th scope="row">logging</th><td data-label="역할">로그 · 에러 추적</td><td data-label="호출" class="n">40</td><td data-label="token" class="n">3.5M</td><td data-label="비용" class="n">$2.48</td></tr><tr><th scope="row">data-secrets</th><td data-label="역할">storage · DB · secret</td><td data-label="호출" class="n">54</td><td data-label="token" class="n">5.1M</td><td data-label="비용" class="n">$2.71</td></tr><tr><th scope="row">deps</th><td data-label="역할">의존성 (오프라인)</td><td data-label="호출" class="n">22</td><td data-label="token" class="n">1.5M</td><td data-label="비용" class="n">$1.43</td></tr><tr><th scope="row">v-auth</th><td data-label="역할">인증 묶음 후보 반박</td><td data-label="호출" class="n">20</td><td data-label="token" class="n">1.5M</td><td data-label="비용" class="n">$1.16</td></tr><tr><th scope="row">v-routes</th><td data-label="역할">route 묶음 후보 반박</td><td data-label="호출" class="n">24</td><td data-label="token" class="n">1.7M</td><td data-label="비용" class="n">$1.20</td></tr><tr><th scope="row">v-data</th><td data-label="역할">데이터 묶음 후보 반박</td><td data-label="호출" class="n">22</td><td data-label="token" class="n">1.6M</td><td data-label="비용" class="n">$1.32</td></tr></tbody></table>
+    <p class="muted">2 run 평균. token은 입력 · cache 쓰기 · cache 읽기 · 출력의 합입니다. worker는 cache를 5분 TTL로 쓰고, orchestrator와 single은 1시간 TTL로 씁니다.</p>
+  </div></div></details><details><summary>loop 데모의 과제에 graph-plan이 내린 판정</summary><div class="body"><table class="stack"><thead><tr><th>과제 문장</th><th>판정</th><th>결정 질문</th></tr></thead><tbody><tr><th scope="row">한 줄: 목표(e2e 시간 줄이기)와 "판정만" 조건만 (N=3)</th><td data-label="판정">graph 3/3 (1번은 "기준선을 먼저 재고 10초 넘는 묶음이 2개 이상일 때만" 조건부)</td><td data-label="결정 질문">Q3: 대기 · 기획 LLM · 이미지와 gate · 판정이 서로 다른 domain이라 한 context에 안 들어감</td></tr><tr><th scope="row">구체: loop 데모의 문장 그대로, 측정 명령 · 규칙 · 금지 사항까지 (N=1)</th><td data-label="판정">loop 1/1</td><td data-label="결정 질문">Q3: 측정을 한 번에 하나씩만 할 수 있고 후보가 모두 같은 critical path 위에 있어 한 context에 들어감</td></tr></tbody></table><p class="muted">판정만, 실행하지 않음 · Opus 5.5 xhigh · run마다 새 clone. 한 줄 문장 합계 $2.06, 구체 문장 $1.96.</p><div class="dbody">
+  <table class="stack"><thead><tr><th>질문</th><th>run 1</th><th>run 2</th><th>run 3</th></tr></thead><tbody>
+    <tr><th scope="row">1. 사람이 모든 출력을 읽나?</th><td data-label="run 1"><span class="q-no">아니오</span></td><td data-label="run 2"><span class="q-no">아니오</span></td><td data-label="run 3"><span class="q-no">아니오</span></td></tr>
+    <tr><th scope="row">2. 기계가 "done"을 검사할 수 있나?</th><td data-label="run 1">조건부 예 (목표치 · 품질 기준을 먼저 정해야 함)</td><td data-label="run 2">예 (가정한 check + guard)</td><td data-label="run 3">예, 다만 느림 (production 표본 필요)</td></tr>
+    <tr class="decide"><th scope="row">3. 한 context · 한 domain에 들어가나?</th><td data-label="run 1"><span class="q-no">아니오 ← 결정</span></td><td data-label="run 2"><span class="q-no">아니오 ← 결정</span></td><td data-label="run 3"><span class="q-no">아니오 ← 결정</span></td></tr>
+    <tr><th scope="row">4. 독립 branch가 2개 이상인가?</th><td data-label="run 1">조건부 예 (10초 넘는 묶음 2개 이상일 때)</td><td data-label="run 2"><span class="q-yes">예</span></td><td data-label="run 3"><span class="q-yes">예</span></td></tr>
+  </tbody></table>
+  <p class="muted">세 run 모두 단계 묶음을 같은 넷(대기 · 기획 LLM · 첫 이미지와 gate · 나머지와 판정)으로 나눴습니다.</p>
+  </div></div></details>
+<aside class="speaker-notes" hidden><p>자세한 기록은 접어 두었습니다. /graph-plan에 준 과제 문장 원문, 설계도 GRAPH.md의 공개용 축약본, orchestrator prompt, 품질을 잰 방법, run별 지표 전체가 있습니다. 실제로 찾은 결함의 내용과 위치는 싣지 않았습니다. 내 일에 graph를 설계할 때 GRAPH.md의 한도와 failure route 표를 참고하시면 됩니다.</p><p>참고 — 상세 보고서는 비공개 폴더에만 있음. 44건은 아직 사람이 다 보지 않았음. GPT와 판정자가 20건 중 5건에서 갈림(이견으로 셈).</p></aside>
+</section>
+
+</main>
+<script>
+function el(id) { return document.getElementById(id); }
+function toggleMenu() { var d = el('vizMenuDropdown'); if (d) d.classList.toggle('open'); }
+document.addEventListener('click', function (e) { if (!e.target.closest('.viz-menu')) { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = el('vizMenuDropdown'); if (d) d.classList.remove('open'); } });
+var currentTheme = document.documentElement.className === 'theme-dark' ? 'dark' : 'light';
+function applyTheme(t) {
+  document.documentElement.className = 'theme-' + t; currentTheme = t;
+  var l = el('themeLabel'); if (l) l.textContent = t === 'dark' ? '라이트 모드' : '다크 모드';
+  try { localStorage.setItem('viz-theme', t); } catch (e) {}
+}
+function cycleTheme() { applyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+function copyText(btn) {
+  var t = btn.parentNode.textContent.replace(/^(복사됨|복사)/, '').trim();
+  try { navigator.clipboard.writeText(t).then(function () { btn.textContent = '복사됨'; setTimeout(function () { btn.textContent = '복사'; }, 1200); }); } catch (e) {}
+}
+async function downloadImage() {
+  if (typeof htmlToImage === 'undefined') return;
+  var menu = document.querySelector('.viz-menu'); menu.style.display = 'none';
+  try { var url = await htmlToImage.toPng(document.body, { pixelRatio: 2 }); var a = document.createElement('a'); a.href = url; a.download = 'graph-demo.png'; a.click(); }
+  catch (e) { console.warn(e); }
+  menu.style.display = '';
+}
+document.addEventListener('DOMContentLoaded', function () { applyTheme(currentTheme); });
+</script>
+<script>
+/* present.js — presenter mode for long single-page docs (skill manuals, demo result pages).
+   Inline this file verbatim at the end of <body>. No dependencies.
+
+   Markup the page provides:
+     - Stops: elements with [data-stop="짧은 제목"] in document order (the one-screen summary is the first stop).
+     - Notes: inside each stop, <aside class="speaker-notes" hidden><p>말할 것…</p><p>참고 — 말하지 않는 부분</p></aside>
+       Notes never show on the page (hidden + CSS below), on screen or in print.
+     - Optional button: <button class="present-btn" type="button">발표 모드 (P)</button> (wired automatically).
+
+   Reading mode (default): keys and scrolling behave normally.
+   Presenting: press P (or the button). A presenter window opens with the notes; the page you share shows no notes.
+     → Space PageDown: next stop · ← PageUp: previous · Home/End · T: restart timer · Esc on the page: leave presenting.
+     Keys work in both windows; both move together. Manual scrolling on the page updates the current stop. */
+(function () {
+  var stops = Array.prototype.slice.call(document.querySelectorAll('[data-stop]'));
+  if (!stops.length) return;
+  var css = document.createElement('style');
+  css.textContent = '.speaker-notes{display:none !important}[data-stop]{scroll-margin-top:12px}' +
+    '.present-btn{position:fixed;right:16px;bottom:16px;z-index:50;font:600 13px/1 Inter,Pretendard,"Noto Sans KR",sans-serif;' +
+    'padding:9px 12px;border-radius:8px;border:1px solid var(--border,rgba(127,127,127,.35));background:var(--surface,#fff);color:var(--text-secondary,#666);cursor:pointer;opacity:.75}' +
+    '.present-btn:hover{opacity:1}body.presenting .present-btn{display:none}' +
+    '@media print{.present-btn{display:none !important}}';
+  document.head.appendChild(css);
+
+  var cur = 0, win = null, t0 = null, tick = null, presenting = false, lock = 0;
+  function title(i) { var s = stops[i]; return s ? (s.getAttribute('data-stop') || '') : ''; }
+  function notes(i) {
+    var box = stops[i] && stops[i].querySelector('.speaker-notes');
+    return box ? Array.prototype.map.call(box.querySelectorAll('p'), function (p) { return p.textContent.trim(); }).filter(Boolean) : [];
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + pad(s % 60); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function go(i) {
+    if (i < 0 || i >= stops.length) return;
+    cur = i; lock = Date.now();
+    stops[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { history.replaceState(null, '', '#stop-' + (i + 1)); } catch (e) {}
+    update();
+  }
+  // manual scrolling: the stop whose top is nearest above the viewport's upper third becomes current
+  window.addEventListener('scroll', function () {
+    if (!presenting || Date.now() - lock < 900) return;
+    var y = window.innerHeight / 3, best = 0;
+    for (var k = 0; k < stops.length; k++) { if (stops[k].getBoundingClientRect().top <= y) best = k; }
+    if (best !== cur) { cur = best; update(); }
+  }, { passive: true });
+
+  function onKey(e) {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'p' || k === 'P') { e.preventDefault(); openPresenter(); return; }
+    if (!presenting) return;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(stops.length - 1); }
+    else if (k === 't' || k === 'T') { t0 = Date.now(); clock(); }
+    else if (k === 'Escape') { presenting = false; document.body.classList.remove('presenting'); }
+  }
+  document.addEventListener('keydown', onKey);
+  Array.prototype.forEach.call(document.querySelectorAll('.present-btn'), function (b) { b.addEventListener('click', openPresenter); });
+
+  function shell() {
+    var styles = Array.prototype.map.call(document.querySelectorAll('style'), function (st) { return st.textContent; }).join('\n');
+    var links = Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) { return l.outerHTML; }).join('');
+    var pv = 'html,body{height:100%;overflow:hidden}body{margin:0 !important;background:#0A0A0A !important;color:#EDEDED !important;' +
+      'font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",Inter,sans-serif;word-break:keep-all}' +
+      '*,*::before,*::after{animation:none !important;transition:none !important}' +
+      '#pv{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px 22px;height:100%;padding:16px 20px;box-sizing:border-box}' +
+      '#pvTop{grid-column:1 / -1;display:flex;align-items:center;gap:16px;font:700 15px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A}' +
+      '#pvTop b{color:#3b82f6;font-size:17px}#pvClock{margin-left:auto;font:800 26px/1 Inter,sans-serif;color:#EDEDED;font-variant-numeric:tabular-nums}' +
+      '#pvL,#pvR{display:flex;flex-direction:column;gap:10px;min-height:0}' +
+      '.lab{font:700 13px/1.3 Inter,Pretendard,sans-serif;color:#9A9A9A;letter-spacing:.03em}' +
+      '#pvTitle{font-size:24px;font-weight:700;line-height:1.3;color:#EDEDED}' +
+      '#pvBox{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:8px;outline:1px solid rgba(255,255,255,.14);background:var(--bg,#fff)}' +
+      '#pvBox > .pvpage{position:absolute;left:0;top:0;width:1280px;transform-origin:0 0;pointer-events:none;padding:16px 24px;box-sizing:border-box;color:var(--text)}' +
+      '#pvNotes{flex:1;min-height:0;overflow:auto;padding-right:6px;font-size:23px;line-height:1.65}' +
+      '#pvNotes p{margin:0 0 14px;color:#EDEDED !important}#pvNotes p.ref{font-size:16px;line-height:1.55;color:#8a8a8a !important;border-top:1px solid rgba(255,255,255,.12);padding-top:10px}' +
+      '#pvNext{font-size:17px;color:#9A9A9A;line-height:1.4}#pvNext b{color:#EDEDED}#pvHelp{font-size:12px;color:#777}';
+    return '<!DOCTYPE html><html lang="ko" class="' + document.documentElement.className + '"' +
+      (document.documentElement.getAttribute('data-theme') ? ' data-theme="' + document.documentElement.getAttribute('data-theme') + '"' : '') +
+      '><head><meta charset="UTF-8"><title>' + esc(document.title) + ' · 발표자 보기</title>' + links +
+      '<style>' + styles + '</style><style>' + pv + '</style></head><body>' +
+      '<div id="pv"><div id="pvTop"><b id="pvNum"></b><span id="pvDoc"></span><span id="pvClock">0:00</span></div>' +
+      '<div id="pvL"><div class="lab">지금 공유 화면의 구간 (미리보기)</div><div id="pvBox"></div></div>' +
+      '<div id="pvR"><div id="pvTitle"></div><div class="lab">스피커 노트 · 회색 “참고”는 말하지 않는 부분</div><div id="pvNotes"></div>' +
+      '<div id="pvNext"></div><div id="pvHelp">→ ← 스페이스: 넘기기 · T: 타이머 다시 시작 · 이 창은 공유하지 마세요</div></div></div></body></html>';
+  }
+  function openPresenter() {
+    presenting = true; document.body.classList.add('presenting');
+    var w = null;
+    try { w = window.open('', 'present-' + location.pathname.split('/').pop(), 'width=1180,height=720'); } catch (e) { w = null; }
+    if (!w) { console.warn('발표자 창을 열지 못했습니다 (팝업 차단?)'); return; }
+    win = w;
+    try {
+      w.document.open(); w.document.write(shell()); w.document.close();
+      w.document.addEventListener('keydown', onKey);
+      w.addEventListener('resize', update);
+    } catch (e) { win = null; return; }
+    if (!t0) t0 = Date.now();
+    if (tick) clearInterval(tick);
+    tick = setInterval(clock, 1000);
+    var h = /^#stop-(\d+)$/.exec(location.hash || '');
+    if (h) cur = Math.min(Math.max(+h[1] - 1, 0), stops.length - 1);
+    update();
+    try { w.focus(); } catch (e) {}
+  }
+  function clock() {
+    if (!win || win.closed) { if (tick) clearInterval(tick); tick = null; win = null; return; }
+    try { win.document.getElementById('pvClock').textContent = fmt((Date.now() - t0) / 1000); } catch (e) {}
+  }
+  function update() {
+    if (!win) return;
+    try {
+      if (win.closed) { win = null; return; }
+      var d = win.document;
+      d.documentElement.className = document.documentElement.className;
+      d.getElementById('pvNum').textContent = (cur + 1) + ' / ' + stops.length;
+      d.getElementById('pvDoc').textContent = document.title;
+      d.getElementById('pvTitle').textContent = title(cur);
+      var box = d.getElementById('pvBox'); box.innerHTML = '';
+      var page = d.createElement('div'); page.className = 'pvpage';
+      var c = stops[cur].cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('.speaker-notes, script'), function (n) { n.remove(); });
+      page.appendChild(c); box.appendChild(page);
+      page.style.transform = 'scale(' + (box.clientWidth / 1280) + ')';
+      var pn = d.getElementById('pvNotes'); pn.innerHTML = '';
+      var ns = notes(cur);
+      if (!ns.length) { var e0 = d.createElement('p'); e0.className = 'ref'; e0.textContent = '이 구간에는 노트가 없습니다.'; pn.appendChild(e0); }
+      ns.forEach(function (t) { var p = d.createElement('p'); p.textContent = t; if (/^참고/.test(t)) p.className = 'ref'; pn.appendChild(p); });
+      pn.scrollTop = 0;
+      d.getElementById('pvNext').innerHTML = cur + 1 < stops.length ? '다음: <b>' + esc(title(cur + 1)) + '</b>' : '마지막 구간입니다.';
+      clock();
+    } catch (e) { win = null; }
+  }
+})();
+</script>
+</body>
+</html>

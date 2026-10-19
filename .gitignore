@@ -1,0 +1,7 @@
+# OS·도구 캐시
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
