@@ -21,7 +21,7 @@
 
 </div>
 
-AI agent 작업을 token(호출 한 번의 비용) → loop(기계가 판정하는 멈춤) → graph(여러 agent의 분기와 계약) 세 층으로 나눠 실험 결과와 함께 살펴보고, AI가 나아질수록 사람이 무엇을 더 잘해야 하는지로 마무리한 세미나의 **스킬 설명서**와 발표에서 사용한 **스킬 3종**(token-efficiency-summary · loop-spec · graph-plan)을 담은 저장소다. 최종 발표 deck은 리허설 뒤 추가한다.
+AI agent 작업을 token(호출 한 번의 비용) → loop(기계가 판정하는 멈춤) → graph(여러 agent의 분기와 계약) 세 층으로 나눠 실험 결과와 함께 살펴보고, AI가 나아질수록 사람이 무엇을 더 잘해야 하는지로 마무리한 세미나의 **스킬 설명서**와 발표에서 사용한 **스킬 3종**(token-efficiency-summary · loop-spec · graph-plan)을 담은 저장소다. 발표 deck(발표 노트를 뺀 화면판)은 `slides/index.html`에 있다.
 
 ## 빠른 시작
 
@@ -36,9 +36,10 @@ python3 -m http.server 8000
 # 브라우저: http://localhost:8000/manuals/token-efficiency-summary.html
 #           http://localhost:8000/manuals/loop-spec.html
 #           http://localhost:8000/manuals/graph-plan.html
+#           http://localhost:8000/slides/index.html   (발표 deck)
 ```
 
-최종 deck이 추가되면 같은 서버에서 `slides/` 아래 HTML을 연다.
+deck은 ← → 키로 넘기고, S를 누르면 슬라이드 목록이 나온다.
 
 ### 스킬 설치
 
@@ -69,7 +70,7 @@ python3 -B -m unittest discover -s token-efficiency-summary/scripts/tests
 
 | 경로 | 내용 |
 |---|---|
-| [slides/](slides/README.md) | 발표 deck 자리. 최종 deck은 리허설 뒤 추가한다. |
+| [slides/](slides/README.md) | 발표 deck 72장(`index.html`). 공개판이라 발표 노트는 뺐다. |
 | `manuals/*.html` | 스킬 3종의 설명서 페이지([token-efficiency-summary](manuals/token-efficiency-summary.html) · [loop-spec](manuals/loop-spec.html) · [graph-plan](manuals/graph-plan.html)). |
 | `demos/` | 발표 데모 3종(token · loop · graph)의 결과 페이지. 맨 위 한 화면에 결론과 숫자 셋을 두고, 긴 기록은 접어 두었다. |
 | [token-efficiency-summary/](token-efficiency-summary/README.md) · [loop-spec/](loop-spec/README.md) · [graph-plan/](graph-plan/README.md) | 발표에서 사용한 스킬 3종. 각 폴더의 README와 SKILL.md가 사용법이다. |
